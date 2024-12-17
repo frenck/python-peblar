@@ -1,0 +1,6 @@
+# This extend our general Ruff rules specifically for the examples
+extend = "../../../pyproject.toml"
+
+lint.extend-ignore = [
+  "PLR0915",
+]
