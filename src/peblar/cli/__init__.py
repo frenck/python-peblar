@@ -169,6 +169,48 @@ async def identify(
     console.print("✅[green]Success!")
 
 
+@cli.command("api-token")
+async def api_token(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+        ),
+    ],
+    generate_new: Annotated[
+        bool,
+        typer.Option(
+            help="Generate a new API token",
+            prompt="Generate new token",
+            show_default=True,
+        ),
+    ] = False,
+) -> None:
+    """Get the API token of a Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        token = await peblar.api_token(generate_new_api_token=generate_new)
+
+    panel = Panel(
+        token,
+        expand=False,
+        title="Peblar Local REST API token",
+        border_style="cyan bold",
+    )
+    console.print(panel)
+
+
 @cli.command("info")
 async def system_information(
     host: Annotated[

@@ -3,4 +3,5 @@ extend = "../../../pyproject.toml"
 
 lint.extend-ignore = [
   "PLR0915",
+  "FBT002",
 ]

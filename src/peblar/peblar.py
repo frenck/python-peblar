@@ -21,6 +21,7 @@ from .exceptions import (
 )
 from .models import (
     BaseModel,
+    PeblarApiToken,
     PeblarLogin,
     PeblarSystemInformation,
     PeblarUserConfiguration,
@@ -99,6 +100,16 @@ class Peblar:
                 password=password,
             ),
         )
+
+    async def api_token(self, *, generate_new_api_token: bool = False) -> str:
+        """Get the API token."""
+        url = URL("config/api-token")
+
+        if generate_new_api_token:
+            await self.request(url, method=hdrs.METH_POST)
+
+        result = await self.request(url)
+        return PeblarApiToken.from_json(result).api_token
 
     async def available_versions(self) -> PeblarVersions:
         """Get available versions."""

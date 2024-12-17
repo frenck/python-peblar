@@ -46,6 +46,13 @@ class BaseModel(DataClassORJSONMixin):
 
 
 @dataclass(kw_only=True)
+class PeblarApiToken(BaseModel):
+    """Object holding the API token for the Peblar charger."""
+
+    api_token: str = field(metadata=field_options(alias="ApiToken"))
+
+
+@dataclass(kw_only=True)
 class PeblarLogin(BaseModel):
     """Login request for Peblar chargers."""
 
