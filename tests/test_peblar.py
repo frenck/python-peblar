@@ -7,7 +7,6 @@ import asyncio
 import pytest
 from aiohttp import ClientResponse, ClientSession
 from aresponses import Response, ResponsesMockServer
-from syrupy.assertion import SnapshotAssertion
 
 from peblar import Peblar
 from peblar.exceptions import (
@@ -17,15 +16,12 @@ from peblar.exceptions import (
 )
 
 
-async def test_identify(
-    aresponses: ResponsesMockServer, snapshot: SnapshotAssertion
-) -> None:
+async def test_identify(aresponses: ResponsesMockServer) -> None:
     """Test the identify method."""
 
     async def response_handler(request: ClientResponse) -> Response:
         """Response handler for this test."""
-        data = await request.json()
-        assert data == snapshot(name="request")
+        assert not await request.text()
         return aresponses.Response(status=200)
 
     aresponses.add(

@@ -2,24 +2,18 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 import orjson
-from aiohttp.hdrs import METH_GET, METH_POST, METH_PUT
 from awesomeversion import AwesomeVersion
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.orjson import DataClassORJSONMixin
 from mashumaro.types import SerializationStrategy
-from yarl import URL
 
 from .const import AccessMode, LedIntensityMode, SolarChargingMode, SoundVolume
 from .utils import get_awesome_version
-
-_RequestData = TypeVar("_RequestData")
-_ResponseT = TypeVar("_ResponseT")
 
 
 class AwesomeVersionSerializationStrategy(SerializationStrategy, use_annotations=True):
@@ -52,75 +46,13 @@ class BaseModel(DataClassORJSONMixin):
 
 
 @dataclass(kw_only=True)
-class PeblarRequest(Generic[_RequestData, _ResponseT], BaseModel):
-    """Base request object for Peblar chargers."""
-
-    data: _RequestData | None = None
-
-    @property
-    def request_method(self) -> str:
-        """Return the HTTP method for the request."""
-        return METH_GET
-
-    @property
-    @abstractmethod
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-
-    @property
-    @abstractmethod
-    def response_type(self) -> type[_ResponseT] | None:
-        """Return the type of the response."""
-
-
-@dataclass(kw_only=True)
-class PeblarResponse(BaseModel):
-    """Base response object for Peblar chargers."""
-
-
-@dataclass(kw_only=True)
-class PeblarLoginRequest(PeblarRequest[None, None]):
+class PeblarLogin(BaseModel):
     """Login request for Peblar chargers."""
 
     password: str = field(metadata=field_options(alias="Password"))
     persistent_session: bool = field(
         default=False, metadata=field_options(alias="PersistentSession")
     )
-
-    @property
-    def request_method(self) -> str:
-        """Return the HTTP method for the request."""
-        return METH_POST
-
-    @property
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-        return URL("v1/auth/login")
-
-    @property
-    def response_type(self) -> None:
-        """Return the HTTP method for the request."""
-        return None
-
-
-@dataclass(kw_only=True)
-class PeblarIdentifyRequest(PeblarRequest[None, None]):
-    """Identify request for Peblar chargers."""
-
-    @property
-    def request_method(self) -> str:
-        """Return the HTTP method for the request."""
-        return METH_PUT
-
-    @property
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-        return URL("v1/system/identify")
-
-    @property
-    def response_type(self) -> None:
-        """Return the HTTP method for the request."""
-        return None
 
 
 @dataclass(kw_only=True)
@@ -146,36 +78,6 @@ class PeblarVersions(BaseModel):
         # E.g., `1.6.1+1+WL-1.0`
         d["firmware_version"] = d.get("Firmware", "").split("+")[0]
         return d
-
-
-@dataclass(kw_only=True)
-class PeblarCurrentVersionsRequest(PeblarRequest[None, PeblarVersions]):
-    """Current versions request for Peblar chargers."""
-
-    @property
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-        return URL("v1/system/software/automatic-update/current-versions")
-
-    @property
-    def response_type(self) -> type[PeblarVersions]:
-        """Return the HTTP method for the request."""
-        return PeblarVersions
-
-
-@dataclass(kw_only=True)
-class PeblarAvailableVersionsRequest(PeblarRequest[None, PeblarVersions]):
-    """Available versions request for Peblar chargers."""
-
-    @property
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-        return URL("v1/system/software/automatic-update/available-versions")
-
-    @property
-    def response_type(self) -> type[PeblarVersions]:
-        """Return the HTTP method for the request."""
-        return PeblarVersions
 
 
 @dataclass(kw_only=True)
@@ -288,21 +190,6 @@ class PeblarSystemInformation(BaseModel):
     product_vendor_name: str = field(metadata=field_options(alias="ProductVendorName"))
     wlan_ap_mac_address: str = field(metadata=field_options(alias="WlanApMacAddr"))
     wlan_mac_address: str = field(metadata=field_options(alias="WlanStaMacAddr"))
-
-
-@dataclass(kw_only=True)
-class PeblarSystemInformationRequest(PeblarRequest[None, PeblarSystemInformation]):
-    """System information request for Peblar chargers."""
-
-    @property
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-        return URL("v1/system/info")
-
-    @property
-    def response_type(self) -> type[PeblarSystemInformation]:
-        """Return the HTTP method for the request."""
-        return PeblarSystemInformation
 
 
 @dataclass(kw_only=True)
@@ -465,18 +352,3 @@ class PeblarUserConfiguration(BaseModel):
         )
         d["BopSourceParameters"] = orjson.loads(d.get("BopSourceParameters", "{}"))
         return d
-
-
-@dataclass(kw_only=True)
-class PeblarUserConfigurationRequest(PeblarRequest[None, PeblarUserConfiguration]):
-    """User configuration request for Peblar chargers."""
-
-    @property
-    def request_uri(self) -> URL:
-        """Return the URI for the request."""
-        return URL("v1/config/user")
-
-    @property
-    def response_type(self) -> type[PeblarUserConfiguration]:
-        """Return the HTTP method for the request."""
-        return PeblarUserConfiguration

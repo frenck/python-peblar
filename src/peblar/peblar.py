@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 import socket
 from dataclasses import dataclass
-from typing import Any, Self, TypeVar, cast
+from typing import Self
 
 import backoff
 import orjson
-from aiohttp import ClientResponseError, CookieJar
+from aiohttp import ClientResponseError, CookieJar, hdrs
 from aiohttp.client import ClientError, ClientSession
 from yarl import URL
 
@@ -20,19 +20,12 @@ from .exceptions import (
     PeblarError,
 )
 from .models import (
-    PeblarAvailableVersionsRequest,
-    PeblarCurrentVersionsRequest,
-    PeblarIdentifyRequest,
-    PeblarLoginRequest,
-    PeblarRequest,
+    BaseModel,
+    PeblarLogin,
     PeblarSystemInformation,
-    PeblarSystemInformationRequest,
     PeblarUserConfiguration,
-    PeblarUserConfigurationRequest,
     PeblarVersions,
 )
-
-_PeblarRequestT = TypeVar("_PeblarRequestT", bound=PeblarRequest[Any, Any])
 
 
 @dataclass(kw_only=True)
@@ -47,7 +40,7 @@ class Peblar:
 
     def __post_init__(self) -> None:
         """Initialize the Peblar object."""
-        self.url = URL.build(scheme="http", host=self.host, path="/api/")
+        self.url = URL.build(scheme="http", host=self.host, path="/api/v1/")
 
     @backoff.on_exception(
         backoff.expo,
@@ -57,8 +50,11 @@ class Peblar:
     )
     async def request(
         self,
-        request: _PeblarRequestT,
-    ) -> _PeblarRequestT.response_type:  # type: ignore[name-defined]
+        uri: URL,
+        *,
+        method: str = hdrs.METH_GET,
+        data: BaseModel | None = None,
+    ) -> str:
         """Handle a request to a Peblar charger."""
         if self.session is None:
             self.session = ClientSession(
@@ -70,10 +66,10 @@ class Peblar:
         try:
             async with asyncio.timeout(self.request_timeout):
                 response = await self.session.request(
-                    request.request_method,
-                    self.url.join(request.request_uri),
+                    method=method,
+                    url=self.url.join(uri),
                     headers={"Content-Type": "application/json"},
-                    data=request.to_json(),
+                    data=data.to_json() if data else None,
                 )
                 response.raise_for_status()
         except TimeoutError as exception:
@@ -92,47 +88,45 @@ class Peblar:
             msg = "Error occurred while communicating to the Peblar charger"
             raise PeblarConnectionError(msg) from exception
 
-        if request.response_type is None:
-            return None
-
-        response_text = await response.text()
-        return request.response_type.from_json(response_text)
+        return await response.text()
 
     async def login(self, *, password: str) -> None:
         """Login into the Peblar charger."""
         await self.request(
-            PeblarLoginRequest(
+            URL("auth/login"),
+            method=hdrs.METH_POST,
+            data=PeblarLogin(
                 password=password,
-            )
+            ),
         )
 
     async def available_versions(self) -> PeblarVersions:
         """Get available versions."""
-        return cast(
-            PeblarVersions, await self.request(PeblarAvailableVersionsRequest())
+        result = await self.request(
+            URL("system/software/automatic-update/available-versions")
         )
+        return PeblarVersions.from_json(result)
 
     async def current_versions(self) -> PeblarVersions:
         """Get current versions."""
-        return cast(PeblarVersions, await self.request(PeblarCurrentVersionsRequest()))
+        result = await self.request(
+            URL("system/software/automatic-update/current-versions")
+        )
+        return PeblarVersions.from_json(result)
 
     async def identify(self) -> None:
         """Identify the Peblar charger."""
-        await self.request(PeblarIdentifyRequest())
+        await self.request(URL("system/identify"), method=hdrs.METH_PUT)
 
     async def system_information(self) -> PeblarSystemInformation:
         """Get information about the Peblar charger."""
-        return cast(
-            PeblarSystemInformation,
-            await self.request(PeblarSystemInformationRequest()),
-        )
+        result = await self.request(URL("system/info"))
+        return PeblarSystemInformation.from_json(result)
 
     async def user_configuration(self) -> PeblarUserConfiguration:
         """Get information about the user configuration."""
-        return cast(
-            PeblarUserConfiguration,
-            await self.request(PeblarUserConfigurationRequest()),
-        )
+        result = await self.request(URL("config/user"))
+        return PeblarUserConfiguration.from_json(result)
 
     async def close(self) -> None:
         """Close open client session."""
