@@ -38,7 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
-  "typer>=0.12.3",
+  "typer>=0.15.1",
   "zeroconf>=0.126.0",
 ]
 

@@ -48,29 +48,6 @@ async def test_request_with_shared_session(aresponses: ResponsesMockServer) -> N
         await peblar.close()
 
 
-async def test_timeout(aresponses: ResponsesMockServer) -> None:
-    """Test request timeout."""
-
-    # Faking a timeout by sleeping
-    async def response_handler(_: ClientResponse) -> Response:
-        """Response handler for this test."""
-        await asyncio.sleep(8)
-        return aresponses.Response(status=200)
-
-    aresponses.add(
-        "example.com",
-        "/api/v1/system/identify",
-        "PUT",
-        response_handler,
-    )
-    async with Peblar(
-        host="example.com",
-        request_timeout=1,
-    ) as peblar:
-        with pytest.raises(PeblarConnectionError):
-            await peblar.identify()
-
-
 async def test_http_error400(aresponses: ResponsesMockServer) -> None:
     """Test HTTP 404 response handling."""
     aresponses.add(

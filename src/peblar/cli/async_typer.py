@@ -53,7 +53,6 @@ class AsyncTyper(SyncTyper):
     # pylint: disable-next=too-many-arguments, too-many-locals
     def callback(  # type: ignore[override] # noqa: PLR0913
         self,
-        name: str | None = None,
         *,
         cls: type[TyperGroup] | None = None,
         invoke_without_command: bool = False,
@@ -78,7 +77,6 @@ class AsyncTyper(SyncTyper):
         """Create a new typer callback."""
         super_callback = super().callback(
             cls=cls,
-            name=name,
             invoke_without_command=invoke_without_command,
             no_args_is_help=no_args_is_help,
             subcommand_metavar=subcommand_metavar,
