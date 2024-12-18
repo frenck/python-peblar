@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 from aiohttp import ClientResponse, ClientSession
 from aresponses import Response, ResponsesMockServer
@@ -11,7 +9,6 @@ from aresponses import Response, ResponsesMockServer
 from peblar import Peblar
 from peblar.exceptions import (
     PeblarAuthenticationError,
-    PeblarConnectionError,
     PeblarError,
 )
 
