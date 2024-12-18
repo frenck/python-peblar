@@ -102,6 +102,7 @@ async def versions(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -111,6 +112,7 @@ async def versions(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
 ) -> None:
@@ -150,6 +152,7 @@ async def identify(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -159,6 +162,7 @@ async def identify(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
 ) -> None:
@@ -178,6 +182,7 @@ async def reboot(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -187,6 +192,7 @@ async def reboot(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
 ) -> None:
@@ -198,57 +204,16 @@ async def reboot(
     console.print("✅[green]Success!")
 
 
-@cli.command("api-token")
-async def api_token(
-    host: Annotated[
-        str,
-        typer.Option(
-            help="Peblar charger IP address or hostname",
-            prompt="Host address",
-            show_default=False,
-        ),
-    ],
-    password: Annotated[
-        str,
-        typer.Option(
-            help="Peblar charger login password",
-            prompt="Password",
-            show_default=False,
-            hide_input=True,
-        ),
-    ],
-    generate_new: Annotated[
-        bool,
-        typer.Option(
-            help="Generate a new API token",
-            prompt="Generate new token",
-            show_default=True,
-        ),
-    ] = False,
-) -> None:
-    """Get the API token of a Peblar charger."""
-    async with Peblar(host=host) as peblar:
-        await peblar.login(password=password)
-        token = await peblar.api_token(generate_new_api_token=generate_new)
-
-    panel = Panel(
-        token,
-        expand=False,
-        title="Peblar Local REST API token",
-        border_style="cyan bold",
-    )
-    console.print(panel)
-
-
-@cli.command("rest")
+@cli.command("api")
 # pylint: disable=too-many-arguments,too-many-positional-arguments
-async def rest(
+async def api(
     host: Annotated[
         str,
         typer.Option(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -258,6 +223,7 @@ async def rest(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
     enable: Annotated[
@@ -284,6 +250,12 @@ async def rest(
             help="Set access mode to read-only",
         ),
     ] = False,
+    generate_new_token: Annotated[
+        bool,
+        typer.Option(
+            help="Generate a new API token",
+        ),
+    ] = False,
 ) -> None:
     """Get the API token of a Peblar charger."""
     if enable and disable:
@@ -292,23 +264,36 @@ async def rest(
     if read and write:
         msg = "--read cannot be used with --write."
         raise typer.BadParameter(msg)
-    if not enable and not disable and not read and not write:
-        msg = "At least one of --enable, --disable, --read or --write must be used."
-        raise typer.BadParameter(msg)
 
-    with console.status("[cyan]Adjusting...", spinner="toggle12"):
-        async with Peblar(host=host) as peblar:
-            await peblar.login(password=password)
-            if enable:
-                await peblar.rest_api(enable=True)
-            if disable:
-                await peblar.rest_api(enable=False)
-            if read:
-                await peblar.rest_api(access_mode=AccessMode.READ_ONLY)
-            if write:
-                await peblar.rest_api(access_mode=AccessMode.READ_WRITE)
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        if enable or disable or read or write or generate_new_token:
+            with console.status("[cyan]Adjusting...", spinner="toggle12"):
+                if enable:
+                    await peblar.rest_api(enable=True)
+                if disable:
+                    await peblar.rest_api(enable=False)
+                if read:
+                    await peblar.rest_api(access_mode=AccessMode.READ_ONLY)
+                if write:
+                    await peblar.rest_api(access_mode=AccessMode.READ_WRITE)
+                if generate_new_token:
+                    await peblar.api_token(generate_new_api_token=generate_new_token)
+            console.print("✅[green]Success!")
 
-    console.print("✅[green]Success!")
+        config = await peblar.user_configuration()
+        token = await peblar.api_token()
+
+    table = Table(title="Peblar Local REST API configuration")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row(
+        "Local REST API enabled", convert_to_string(config.local_rest_api_enabled)
+    )
+    table.add_row("Local REST API access mode", config.local_rest_api_access_mode.value)
+    table.add_row("Local REST API token", token)
+    console.print(table)
 
 
 @cli.command("modbus")
@@ -320,6 +305,7 @@ async def modbus(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -329,6 +315,7 @@ async def modbus(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
     enable: Annotated[
@@ -363,23 +350,30 @@ async def modbus(
     if read and write:
         msg = "--read cannot be used with --write."
         raise typer.BadParameter(msg)
-    if not enable and not disable and not read and not write:
-        msg = "At least one of --enable, --disable, --read or --write must be used."
-        raise typer.BadParameter(msg)
 
-    with console.status("[cyan]Adjusting...", spinner="toggle12"):
-        async with Peblar(host=host) as peblar:
-            await peblar.login(password=password)
-            if enable:
-                await peblar.modbus_api(enable=True)
-            if disable:
-                await peblar.modbus_api(enable=False)
-            if read:
-                await peblar.modbus_api(access_mode=AccessMode.READ_ONLY)
-            if write:
-                await peblar.modbus_api(access_mode=AccessMode.READ_WRITE)
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        if enable or disable or read or write:
+            with console.status("[cyan]Adjusting...", spinner="toggle12"):
+                if enable:
+                    await peblar.modbus_api(enable=True)
+                if disable:
+                    await peblar.modbus_api(enable=False)
+                if read:
+                    await peblar.modbus_api(access_mode=AccessMode.READ_ONLY)
+                if write:
+                    await peblar.modbus_api(access_mode=AccessMode.READ_WRITE)
+            console.print("✅[green]Success!")
+        config = await peblar.user_configuration()
 
-    console.print("✅[green]Success!")
+    table = Table(title="Peblar Modbus API configuration")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row("Modbus API enabled", convert_to_string(config.modbus_server_enabled))
+    table.add_row("Modbus API access mode", config.modbus_server_access_mode.value)
+
+    console.print(table)
 
 
 @cli.command("info")
@@ -390,6 +384,7 @@ async def system_information(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -399,6 +394,7 @@ async def system_information(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
 ) -> None:
@@ -477,6 +473,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -486,6 +483,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
 ) -> None:
@@ -676,6 +674,7 @@ async def smart_charging(
             help="Peblar charger IP address or hostname",
             prompt="Host address",
             show_default=False,
+            envvar="PEBLAR_HOST",
         ),
     ],
     password: Annotated[
@@ -685,6 +684,7 @@ async def smart_charging(
             prompt="Password",
             show_default=False,
             hide_input=True,
+            envvar="PEBLAR_PASSWORD",
         ),
     ],
     default: Annotated[
