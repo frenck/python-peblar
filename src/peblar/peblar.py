@@ -22,11 +22,15 @@ from .exceptions import (
 from .models import (
     BaseModel,
     PeblarApiToken,
+    PeblarEVInterface,
+    PeblarHealth,
     PeblarLocalRestApiAccess,
     PeblarLogin,
+    PeblarMeter,
     PeblarModbusApiAccess,
     PeblarReboot,
     PeblarSmartCharging,
+    PeblarSystem,
     PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
@@ -113,7 +117,7 @@ class Peblar:
         *,
         enable: bool | None = None,
         access_mode: AccessMode | None = None,
-    ) -> None:
+    ) -> PeblarApi:
         """Get and control access to the REST API."""
         user = await self.user_configuration()
         if not user.local_rest_api_allowed:
@@ -132,6 +136,14 @@ class Peblar:
                 method=hdrs.METH_PATCH,
                 data=PeblarLocalRestApiAccess(enabled=enable, access_mode=access_mode),
             )
+            if enable is not None:
+                user.local_rest_api_enabled = enable
+
+        if not user.local_rest_api_enabled:
+            msg = "The local REST API is not enabled for this device."
+            raise PeblarError(msg)
+
+        return PeblarApi(host=self.host, token=await self.api_token())
 
     async def modbus_api(
         self,
@@ -223,6 +235,117 @@ class Peblar:
         Returns
         -------
             The Peblar object.
+
+        """
+        return self
+
+    async def __aexit__(self, *_exc_info: object) -> None:
+        """Async exit.
+
+        Args:
+        ----
+            _exc_info: Exec type.
+
+        """
+        await self.close()
+
+
+@dataclass(kw_only=True)
+class PeblarApi:
+    """Main class for handling connections with the Local Peblar REST API."""
+
+    host: str
+    token: str
+    request_timeout: float = 8
+    session: ClientSession | None = None
+
+    _close_session: bool = False
+
+    def __post_init__(self) -> None:
+        """Initialize the Peblar object."""
+        self.url = URL.build(scheme="http", host=self.host, path="/api/wlac/v1/")
+
+    @backoff.on_exception(
+        backoff.expo,
+        PeblarConnectionError,
+        max_tries=3,
+        logger=None,
+    )
+    async def request(
+        self,
+        uri: URL,
+        *,
+        method: str = hdrs.METH_GET,
+        data: BaseModel | None = None,
+    ) -> str:
+        """Handle a request to a Peblar charger Local REST API."""
+        if self.session is None:
+            self.session = ClientSession(
+                json_serialize=orjson.dumps,  # type: ignore[arg-type]
+            )
+            self._close_session = True
+
+        try:
+            async with asyncio.timeout(self.request_timeout):
+                response = await self.session.request(
+                    method=method,
+                    url=self.url.join(uri),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": self.token,
+                    },
+                    data=data.to_json() if data else None,
+                )
+                response.raise_for_status()
+        except TimeoutError as exception:
+            msg = "Timeout occurred while connecting to the Peblar charger API"
+            raise PeblarConnectionTimeoutError(msg) from exception
+        except ClientResponseError as exception:
+            if exception.status == 401:
+                msg = "Authentication error. Provided password is invalid."
+                raise PeblarAuthenticationError(msg) from exception
+            msg = "Error occurred while communicating to the Peblar charger API"
+            raise PeblarError(msg) from exception
+        except (
+            ClientError,
+            socket.gaierror,
+        ) as exception:
+            msg = "Error occurred while communicating to the Peblar charger API"
+            raise PeblarConnectionError(msg) from exception
+
+        return await response.text()
+
+    async def ev_interface(self) -> PeblarEVInterface:
+        """Get information about the EV interface."""
+        result = await self.request(URL("evinterface"))
+        return PeblarEVInterface.from_json(result)
+
+    async def health(self) -> PeblarHealth:
+        """Get health information from the Peblar API."""
+        result = await self.request(URL("health"))
+        return PeblarHealth.from_json(result)
+
+    async def meter(self) -> PeblarMeter:
+        """Get meter information from the Peblar API."""
+        result = await self.request(URL("meter"))
+        return PeblarMeter.from_json(result)
+
+    async def system(self) -> PeblarSystem:
+        """Get system information from the Peblar API."""
+        result = await self.request(URL("system"))
+        return PeblarSystem.from_json(result)
+
+    async def close(self) -> None:
+        """Close open client session."""
+        if self.session and self._close_session:
+            await self.session.close()
+
+    async def __aenter__(self) -> Self:
+        """Async enter.
+
+        Returns
+        -------
+            The PeblarApi object.
 
         """
         return self

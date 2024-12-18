@@ -14,6 +14,8 @@ from mashumaro.types import SerializationStrategy
 
 from .const import (
     AccessMode,
+    ChargeLimiter,
+    CPState,
     LedIntensityMode,
     SmartChargingMode,
     SolarChargingMode,
@@ -462,3 +464,74 @@ class PeblarSmartCharging(BaseModel):
                 self.scheduled_charging_enable = False
                 self.solar_charging_enable = True
                 self.solar_charging_mode = SolarChargingMode.PURE_SOLAR
+
+
+@dataclass(kw_only=True)
+class PeblarHealth(BaseModel):
+    """Object holding the health information of the Peblar charger."""
+
+    access_mode: AccessMode = field(metadata=field_options(alias="AccessMode"))
+    api_version: AwesomeVersion = field(metadata=field_options(alias="ApiVersion"))
+
+
+@dataclass(kw_only=True)
+# pylint: disable-next=too-many-instance-attributes
+class PeblarSystem(BaseModel):
+    """Object holding the system information of the Peblar charger."""
+
+    active_error_codes: list[str] = field(
+        metadata=field_options(alias="ActiveErrorCodes")
+    )
+    active_warning_codes: list[str] = field(
+        metadata=field_options(alias="ActiveWarningCodes")
+    )
+    cellular_signal_strength: int | None = field(
+        metadata=field_options(alias="CellularSignalStrength")
+    )
+    firmware_version: str = field(metadata=field_options(alias="FirmwareVersion"))
+    force_single_phase_allowed: bool = field(
+        metadata=field_options(alias="Force1PhaseAllowed")
+    )
+    phase_count: int = field(metadata=field_options(alias="PhaseCount"))
+    product_part_number: str = field(metadata=field_options(alias="ProductPn"))
+    product_serial_number: str = field(metadata=field_options(alias="ProductSn"))
+    uptime: int = field(metadata=field_options(alias="Uptime"))
+    wlan_signal_strength: int | None = field(
+        metadata=field_options(alias="WlanSignalStrength")
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarEVInterface(BaseModel):
+    """Object holding the EV interface information of the Peblar charger."""
+
+    charge_current_limit: int = field(
+        metadata=field_options(alias="ChargeCurrentLimit")
+    )
+    charge_current_limit_actual: int = field(
+        metadata=field_options(alias="ChargeCurrentLimitActual")
+    )
+    charge_current_limit_source: ChargeLimiter = field(
+        metadata=field_options(alias="ChargeCurrentLimitSource")
+    )
+    cp_state: CPState = field(metadata=field_options(alias="CpState"))
+    force_single_phase: bool = field(metadata=field_options(alias="Force1Phase"))
+
+
+@dataclass(kw_only=True)
+# pylint: disable-next=too-many-instance-attributes
+class PeblarMeter(BaseModel):
+    """Object holding the meter information of the Peblar charger."""
+
+    current_phase_1: int = field(metadata=field_options(alias="CurrentPhase1"))
+    current_phase_2: int = field(metadata=field_options(alias="CurrentPhase2"))
+    current_phase_3: int = field(metadata=field_options(alias="CurrentPhase3"))
+    energy_session: int = field(metadata=field_options(alias="EnergySession"))
+    energy_total: int = field(metadata=field_options(alias="EnergyTotal"))
+    power_phase_1: int = field(metadata=field_options(alias="PowerPhase1"))
+    power_phase_2: int = field(metadata=field_options(alias="PowerPhase2"))
+    power_phase_3: int = field(metadata=field_options(alias="PowerPhase3"))
+    power_total: int = field(metadata=field_options(alias="PowerTotal"))
+    voltage_phase_1: int = field(metadata=field_options(alias="VoltagePhase1"))
+    voltage_phase_2: int | None = field(metadata=field_options(alias="VoltagePhase2"))
+    voltage_phase_3: int | None = field(metadata=field_options(alias="VoltagePhase3"))

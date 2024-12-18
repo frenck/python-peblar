@@ -12,7 +12,7 @@ from rich.table import Table
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from peblar.const import AccessMode, SmartChargingMode
+from peblar.const import AccessMode, CPState, SmartChargingMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -206,7 +206,7 @@ async def reboot(
 
 @cli.command("api")
 # pylint: disable=too-many-arguments,too-many-positional-arguments
-async def api(
+async def rest_api(
     host: Annotated[
         str,
         typer.Option(
@@ -257,7 +257,7 @@ async def api(
         ),
     ] = False,
 ) -> None:
-    """Get the API token of a Peblar charger."""
+    """Control access to the Local REST API."""
     if enable and disable:
         msg = "--disable cannot be used with --enable."
         raise typer.BadParameter(msg)
@@ -412,7 +412,7 @@ async def system_information(
     table.add_row("Firmware version", info.firmware_version)
     table.add_row(
         "Hardware fixed cable rating",
-        convert_to_string(info.hardware_fixed_cable_rating),
+        f"{info.hardware_fixed_cable_rating}A",
     )
     table.add_row(
         "Hardware has 4P relay", convert_to_string(info.hardware_has_4p_relay)
@@ -442,7 +442,7 @@ async def system_information(
     table.add_row("Hardware has socket", convert_to_string(info.hardware_has_socket))
     table.add_row("Hardware has TPM", convert_to_string(info.hardware_has_tpm))
     table.add_row("Hardware has WLAN", convert_to_string(info.hardware_has_wlan))
-    table.add_row("Hardware max current", convert_to_string(info.hardware_max_current))
+    table.add_row("Hardware max current", f"{info.hardware_max_current}A")
     table.add_row(
         "Hardware one or three phase",
         convert_to_string(info.hardware_one_or_three_phase),
@@ -513,7 +513,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "Current control BOP fuse rating",
-        convert_to_string(config.current_control_bop_fuse_rating),
+        f"{config.current_control_bop_fuse_rating}A",
     )
     table.add_row(
         "Current control fixed charge current limit",
@@ -526,7 +526,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "Group load balancing fallback current",
-        convert_to_string(config.group_load_balancing_fallback_current),
+        f"{config.group_load_balancing_fallback_current}A",
     )
     table.add_row(
         "Group load balancing group ID",
@@ -537,7 +537,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "Group load balancing max current",
-        convert_to_string(config.group_load_balancing_max_current),
+        f"{config.group_load_balancing_max_current}A",
     )
     table.add_row("Group load balancing role", config.group_load_balancing_role)
     table.add_row(
@@ -571,15 +571,14 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "Power limit input DI1 limit",
-        convert_to_string(config.power_limit_input_di1_limit),
+        f"{config.power_limit_input_di1_limit}A",
     )
     table.add_row(
         "Power limit input DI2 inverse",
         convert_to_string(config.power_limit_input_di2_inverse),
     )
     table.add_row(
-        "Power limit input DI2 limit",
-        convert_to_string(config.power_limit_input_di2_limit),
+        "Power limit input DI2 limit", f"{config.power_limit_input_di2_limit}A"
     )
     table.add_row(
         "Power limit input enabled", convert_to_string(config.power_limit_input_enabled)
@@ -618,7 +617,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "User defined charge limit current",
-        convert_to_string(config.user_defined_charge_limit_current),
+        f"{config.user_defined_charge_limit_current}A",
     )
     table.add_row(
         "User defined household power limit allowed",
@@ -634,7 +633,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "User defined household power limit",
-        convert_to_string(config.user_defined_household_power_limit),
+        f"{round(config.user_defined_household_power_limit/1000, 3)} kW",
     )
     table.add_row(
         "User keep socket locked", convert_to_string(config.user_keep_socket_locked)
@@ -643,9 +642,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
         "VDE phase imbalance enabled",
         convert_to_string(config.vde_phase_imbalance_enabled),
     )
-    table.add_row(
-        "VDE phase imbalance limit", convert_to_string(config.vde_phase_imbalance_limit)
-    )
+    table.add_row("VDE phase imbalance limit", f"{config.vde_phase_imbalance_limit}A")
     table.add_row(
         "Web IF update helper", convert_to_string(config.web_if_update_helper)
     )
@@ -744,6 +741,239 @@ async def smart_charging(
                 await peblar.smart_charging(SmartChargingMode.SCHEDULED)
 
     console.print("✅[green]Success!")
+
+
+@cli.command("ev")
+async def ev(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+) -> None:
+    """Get the EV interface status of the Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        async with await peblar.rest_api() as api:
+            ev_interface = await api.ev_interface()
+
+    table = Table(title="Peblar EV interface information")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row(
+        "Charge current limit",
+        f"{round(ev_interface.charge_current_limit/1000,3)}A",
+    )
+    table.add_row(
+        "Charge current limit actual",
+        f"{round(ev_interface.charge_current_limit_actual/1000, 3)}A",
+    )
+    table.add_row(
+        "Charge current limit source", ev_interface.charge_current_limit_source
+    )
+
+    cp_state = {
+        CPState.NO_EV_CONNECTED: "EV not connected",
+        CPState.CHARGING_SUSPENDED: "Charging suspended",
+        CPState.CHARGING: "Charging",
+        CPState.CHARGING_VENTILATION: "Charging, ventilation requested",
+        CPState.ERROR: "Error; short or powered off",
+        CPState.FAULT: "Fault; Charger is not operational",
+        CPState.INVALID: "Invalid; Charger is not operational",
+    }.get(ev_interface.cp_state, "Unknown")
+
+    table.add_row("CP state", cp_state)
+    table.add_row(
+        "Force single phase", convert_to_string(ev_interface.force_single_phase)
+    )
+
+    console.print(table)
+
+
+@cli.command("health")
+async def health(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+) -> None:
+    """Get the health status of the Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        async with await peblar.rest_api() as api:
+            data = await api.health()
+
+    table = Table(title="Peblar API Health")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row("API Access mode", data.access_mode.value)
+    table.add_row("API version", convert_to_string(data.api_version))
+    console.print(table)
+
+
+@cli.command("meter")
+async def meter(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+) -> None:
+    """Get meter status of the Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        async with await peblar.rest_api() as api:
+            meter_data = await api.meter()
+
+    table = Table(title="Peblar meter status")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row("Energy session", f"{round(meter_data.energy_session/1000, 3)}kWh")
+    table.add_row("Energy total", f"{round(meter_data.energy_total/1000, 3)}kWh")
+
+    table.add_section()
+
+    table.add_row("Total power", f"{meter_data.power_total}W")
+    table.add_row("Power phase 1", f"{meter_data.power_phase_1}W")
+    table.add_row("Power phase 2", f"{meter_data.power_phase_2}W")
+    table.add_row("Power phase 3", f"{meter_data.power_phase_3}W")
+
+    table.add_section()
+
+    total_current = round(
+        (
+            meter_data.current_phase_1
+            + meter_data.current_phase_2
+            + meter_data.current_phase_3
+        )
+        / 100,
+        3,
+    )
+    table.add_row("Total current", f"{total_current}A")
+    table.add_row("Current Phase 1", f"{round(meter_data.current_phase_1/1000,3)}A")
+    table.add_row("Current Phase 2", f"{round(meter_data.current_phase_2/1000,3)}A")
+    table.add_row("Current Phase 3", f"{round(meter_data.current_phase_3/1000,3)}A")
+
+    table.add_section()
+
+    table.add_row("Voltage Phase 1", f"{meter_data.voltage_phase_1 or 0}V")
+    table.add_row("Voltage Phase 2", f"{meter_data.voltage_phase_2 or 0}V")
+    table.add_row("Voltage Phase 3", f"{meter_data.voltage_phase_3 or 0}V")
+
+    console.print(table)
+
+
+@cli.command("system")
+async def system(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+) -> None:
+    """Get the status of the Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        async with await peblar.rest_api() as api:
+            data = await api.system()
+
+    table = Table(title="Peblar charger system status")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row(
+        "Active error codes", ",".join(data.active_error_codes) or "No errors"
+    )
+    table.add_row(
+        "Active warning codes", ",".join(data.active_warning_codes) or "No warnings"
+    )
+
+    table.add_section()
+    table.add_row("Phase count", convert_to_string(data.phase_count))
+    table.add_row(
+        "Force of single phase allowed",
+        convert_to_string(data.force_single_phase_allowed),
+    )
+
+    table.add_section()
+    table.add_row("Firmware version", data.firmware_version)
+    table.add_row("Product serial number", data.product_serial_number)
+    table.add_row("Product part number", data.product_part_number)
+
+    table.add_section()
+    table.add_row("Uptime", f"{data.uptime} seconds")
+    if data.wlan_signal_strength is not None:
+        table.add_row("WLAN signal strength", f"{data.wlan_signal_strength} dBm")
+    else:
+        table.add_row("WLAN signal strength", "WLAN not connected")
+    if data.cellular_signal_strength is not None:
+        table.add_row(
+            "Cellular signal strength", f"{data.cellular_signal_strength} dBm"
+        )
+    else:
+        table.add_row("Cellular signal strength", "Cellular not connected")
+
+    console.print(table)
 
 
 @cli.command("scan")
