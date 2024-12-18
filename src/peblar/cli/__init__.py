@@ -170,6 +170,34 @@ async def identify(
     console.print("✅[green]Success!")
 
 
+@cli.command("reboot")
+async def reboot(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+        ),
+    ],
+) -> None:
+    """Reboot the Peblar charger."""
+    with console.status("[cyan]Rebooting...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.reboot()
+    console.print("✅[green]Success!")
+
+
 @cli.command("api-token")
 async def api_token(
     host: Annotated[

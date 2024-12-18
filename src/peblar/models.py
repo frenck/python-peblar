@@ -53,6 +53,15 @@ class PeblarApiToken(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarReboot(BaseModel):
+    """Object holding the Pedblar reboot playload."""
+
+    reboot_type: str = field(
+        default="HardReboot", metadata=field_options(alias="RebootType")
+    )
+
+
+@dataclass(kw_only=True)
 class PeblarLocalRestApiAccess(BaseModel):
     """Object holding the local REST API configuration of a Peblar charger."""
 

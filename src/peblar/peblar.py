@@ -25,6 +25,7 @@ from .models import (
     PeblarLocalRestApiAccess,
     PeblarLogin,
     PeblarModbusApiAccess,
+    PeblarReboot,
     PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
@@ -183,6 +184,14 @@ class Peblar:
     async def identify(self) -> None:
         """Identify the Peblar charger."""
         await self.request(URL("system/identify"), method=hdrs.METH_PUT)
+
+    async def reboot(self) -> None:
+        """Reboot the Peblar charger."""
+        await self.request(
+            URL("system/reboot"),
+            method=hdrs.METH_POST,
+            data=PeblarReboot(),
+        )
 
     async def system_information(self) -> PeblarSystemInformation:
         """Get information about the Peblar charger."""
