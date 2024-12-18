@@ -26,13 +26,14 @@ from .models import (
     PeblarLogin,
     PeblarModbusApiAccess,
     PeblarReboot,
+    PeblarSmartCharging,
     PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
 )
 
 if TYPE_CHECKING:
-    from peblar.const import AccessMode
+    from peblar.const import AccessMode, SmartChargingMode
 
 
 @dataclass(kw_only=True)
@@ -180,6 +181,14 @@ class Peblar:
             URL("system/software/automatic-update/current-versions")
         )
         return PeblarVersions.from_json(result)
+
+    async def smart_charging(self, smart_charging_mode: SmartChargingMode) -> None:
+        """Enable or disable smart charging."""
+        await self.request(
+            URL("config/user"),
+            method=hdrs.METH_PATCH,
+            data=PeblarSmartCharging(smart_charging=smart_charging_mode),
+        )
 
     async def identify(self) -> None:
         """Identify the Peblar charger."""

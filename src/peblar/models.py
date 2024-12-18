@@ -12,7 +12,13 @@ from mashumaro.config import BaseConfig
 from mashumaro.mixins.orjson import DataClassORJSONMixin
 from mashumaro.types import SerializationStrategy
 
-from .const import AccessMode, LedIntensityMode, SolarChargingMode, SoundVolume
+from .const import (
+    AccessMode,
+    LedIntensityMode,
+    SmartChargingMode,
+    SolarChargingMode,
+    SoundVolume,
+)
 from .utils import get_awesome_version
 
 
@@ -384,6 +390,9 @@ class PeblarUserConfiguration(BaseModel):
         metadata=field_options(alias="WebIfUpdateHelper")
     )
 
+    # Replicated field from the Peblar UI
+    smart_charging: SmartChargingMode | None = None
+
     @classmethod
     def __pre_deserialize__(cls, d: dict[Any, Any]) -> dict[Any, Any]:
         """Pre deserialize hook for PeblarUserConfiguration object."""
@@ -392,3 +401,64 @@ class PeblarUserConfiguration(BaseModel):
         )
         d["BopSourceParameters"] = orjson.loads(d.get("BopSourceParameters", "{}"))
         return d
+
+    @classmethod
+    def __post_deserialize__(
+        cls, obj: PeblarUserConfiguration
+    ) -> PeblarUserConfiguration:
+        """Post deserialize hook for PeblarUserConfiguration object."""
+        if not obj.scheduled_charging_enabled and not obj.solar_charging_enabled:
+            obj.smart_charging = SmartChargingMode.DEFAULT
+        elif obj.scheduled_charging_enabled and not obj.solar_charging_enabled:
+            obj.smart_charging = SmartChargingMode.SCHEDULED
+        elif not obj.scheduled_charging_enabled and obj.solar_charging_enabled:
+            if obj.solar_charging_mode == SolarChargingMode.MAX_SOLAR:
+                obj.smart_charging = SmartChargingMode.FAST_SOLAR
+            elif obj.solar_charging_mode == SolarChargingMode.OPTIMIZED_SOLAR:
+                obj.smart_charging = SmartChargingMode.SMART_SOLAR
+            elif obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR:
+                obj.smart_charging = SmartChargingMode.PURE_SOLAR
+
+        return obj
+
+
+@dataclass(kw_only=True)
+class PeblarSmartCharging(BaseModel):
+    """Object holding the configuration of the Peblar charger."""
+
+    solar_charging_enable: bool | None = field(
+        default=None, metadata=field_options(alias="SolarChargingEnable")
+    )
+    solar_charging_mode: SolarChargingMode | None = field(
+        default=None, metadata=field_options(alias="SolarChargingMode")
+    )
+    scheduled_charging_enable: bool | None = field(
+        default=None, metadata=field_options(alias="ScheduledChargingEnable")
+    )
+
+    # Replicated field from the Peblar UI
+    smart_charging: SmartChargingMode | None = field(
+        default=None, metadata=field_options(serialize="omit")
+    )
+
+    def __post_init__(self) -> None:
+        """Post init hook for PeblarSmartCharging object."""
+        if self.smart_charging:
+            if self.smart_charging == SmartChargingMode.DEFAULT:
+                self.scheduled_charging_enable = False
+                self.solar_charging_enable = False
+            elif self.smart_charging == SmartChargingMode.SCHEDULED:
+                self.scheduled_charging_enable = True
+                self.solar_charging_enable = False
+            elif self.smart_charging == SmartChargingMode.FAST_SOLAR:
+                self.scheduled_charging_enable = False
+                self.solar_charging_enable = True
+                self.solar_charging_mode = SolarChargingMode.MAX_SOLAR
+            elif self.smart_charging == SmartChargingMode.SMART_SOLAR:
+                self.scheduled_charging_enable = False
+                self.solar_charging_enable = True
+                self.solar_charging_mode = SolarChargingMode.OPTIMIZED_SOLAR
+            elif self.smart_charging == SmartChargingMode.PURE_SOLAR:
+                self.scheduled_charging_enable = False
+                self.solar_charging_enable = True
+                self.solar_charging_mode = SolarChargingMode.PURE_SOLAR

@@ -12,7 +12,7 @@ from rich.table import Table
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from peblar.const import AccessMode
+from peblar.const import AccessMode, SmartChargingMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -240,9 +240,9 @@ async def api_token(
     console.print(panel)
 
 
-@cli.command("rest-api")
+@cli.command("rest")
 # pylint: disable=too-many-arguments,too-many-positional-arguments
-async def rest_api(
+async def rest(
     host: Annotated[
         str,
         typer.Option(
@@ -652,7 +652,98 @@ async def user_configuration(  # pylint: disable=too-many-statements
         "Web IF update helper", convert_to_string(config.web_if_update_helper)
     )
 
+    table.add_section()
+    smart_charging_mode = "Unknown"
+    if config.smart_charging is not None:
+        smart_charging_mode = {
+            SmartChargingMode.DEFAULT: "Default",
+            SmartChargingMode.FAST_SOLAR: "Fast solar",
+            SmartChargingMode.SMART_SOLAR: "Smart solar",
+            SmartChargingMode.PURE_SOLAR: "Pure solar",
+            SmartChargingMode.SCHEDULED: "Scheduled",
+        }.get(config.smart_charging, "Unknown")
+    table.add_row("Smart charging mode", smart_charging_mode)
+
     console.print(table)
+
+
+@cli.command("smart-charging")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+async def smart_charging(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+        ),
+    ],
+    default: Annotated[
+        bool,
+        typer.Option(
+            help="Not limited by any strategy.",
+        ),
+    ] = False,
+    fast_solar: Annotated[
+        bool,
+        typer.Option(
+            help="Fast charge with a mix of grid and solar power.",
+        ),
+    ] = False,
+    smart_solar: Annotated[
+        bool,
+        typer.Option(
+            help="Charge with a smart mix of grid and solar power.",
+        ),
+    ] = False,
+    pure_solar: Annotated[
+        bool,
+        typer.Option(
+            help="Charge only with solar power.",
+        ),
+    ] = False,
+    scheduled: Annotated[
+        bool,
+        typer.Option(
+            help="Scheduled charging.",
+        ),
+    ] = False,
+) -> None:
+    """Control the smart charging mode."""
+    # Only one of the charging modes can be selected, and at least one must be selected.
+    if sum([default, fast_solar, smart_solar, pure_solar, scheduled]) != 1 or not any(
+        [default, fast_solar, smart_solar, pure_solar, scheduled]
+    ):
+        msg = (
+            "Exactly one of --default, --fast-solar, --smart-solar, "
+            "--pure-solar or --scheduled must be used."
+        )
+        raise typer.BadParameter(msg)
+
+    with console.status("[cyan]Adjusting...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            if default:
+                await peblar.smart_charging(SmartChargingMode.DEFAULT)
+            if fast_solar:
+                await peblar.smart_charging(SmartChargingMode.FAST_SOLAR)
+            if smart_solar:
+                await peblar.smart_charging(SmartChargingMode.SMART_SOLAR)
+            if pure_solar:
+                await peblar.smart_charging(SmartChargingMode.PURE_SOLAR)
+            if scheduled:
+                await peblar.smart_charging(SmartChargingMode.SCHEDULED)
+
+    console.print("✅[green]Success!")
 
 
 @cli.command("scan")

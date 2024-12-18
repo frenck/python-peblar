@@ -53,3 +53,22 @@ class LedIntensityMode(StrEnum):
 
     FIXED = "Fixed"
     """Fixed LED intensity."""
+
+
+class SmartChargingMode(StrEnum):
+    """Peblar smart charging mode."""
+
+    DEFAULT = "default"
+    """Not limited by any strategy."""
+
+    FAST_SOLAR = "fast_solar"
+    """Fast charge with a mix of grid and solar power."""
+
+    SMART_SOLAR = "smart_solar"
+    """Charge with a smart mix of grid and solar power."""
+
+    PURE_SOLAR = "pure_solar"
+    """Charge only with solar power."""
+
+    SCHEDULED = "scheduled"
+    "Charge only within the defined schedule."

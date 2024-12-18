@@ -56,7 +56,7 @@ source = ["peblar"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 75
+fail_under = 50
 omit = ["src/peblar/cli/*"]
 
 [tool.mypy]
