@@ -10,16 +10,16 @@
   "commitMessagePrefix": "⬆️",
   "packageRules": [
     {
-      "matchManagers": ["uv"],
+      "matchManagers": ["pep621"],
       "addLabels": ["python"]
     },
     {
-      "matchManagers": ["uv"],
+      "matchManagers": ["pep621"],
       "matchDepTypes": ["dev"],
       "rangeStrategy": "pin"
     },
     {
-      "matchManagers": ["uv"],
+      "matchManagers": ["pep621"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
