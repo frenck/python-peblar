@@ -98,7 +98,7 @@ class ChargeLimiter(StrEnum):
     HIGH_TEMPERATURE = "High temperature"
     """Charging is limited due to high temperature in charger."""
 
-    HOUSEHOLD__POWER_LIMIT = "Household power limit"
+    HOUSEHOLD_POWER_LIMIT = "Household power limit"
     """Charging limited by total power consumption of the household."""
 
     INSTALLATION_LIMIT = "Installation limit"
@@ -152,3 +152,13 @@ class CPState(StrEnum):
 
     INVALID = "Invalid"
     """Invalid CP measured."""
+
+
+class PackageType(StrEnum):
+    """Peblar package type."""
+
+    FIRMWARE = "Firmware"
+    """Firmware package."""
+
+    CUSTOMIZATION = "Customization"
+    """Customization package."""

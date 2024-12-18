@@ -12,7 +12,7 @@ from rich.table import Table
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from peblar.const import AccessMode, CPState, SmartChargingMode
+from peblar.const import AccessMode, CPState, PackageType, SmartChargingMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -201,6 +201,59 @@ async def reboot(
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.reboot()
+    console.print("✅[green]Success!")
+
+
+@cli.command("update")
+async def update(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    firmware: Annotated[
+        bool,
+        typer.Option(
+            help="Update the firmware",
+        ),
+    ] = False,
+    customization: Annotated[
+        bool,
+        typer.Option(
+            help="Update the customization",
+        ),
+    ] = False,
+) -> None:
+    """Update the Peblar charger."""
+    if not firmware and not customization:
+        msg = "At least one of --firmware or --customization must be used."
+        raise typer.BadParameter(msg)
+    if firmware and customization:
+        msg = "--firmware cannot be used with --customization."
+        raise typer.BadParameter(msg)
+
+    with console.status("[cyan]Updating...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            if firmware:
+                await peblar.update(package_type=PackageType.FIRMWARE)
+            if customization:
+                await peblar.update(package_type=PackageType.CUSTOMIZATION)
+
     console.print("✅[green]Success!")
 
 
@@ -764,11 +817,33 @@ async def ev(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    charge_limit: Annotated[
+        int,
+        typer.Option(
+            help="Charge current limit in A",
+        ),
+    ] = None,
+    force_single_phase: Annotated[
+        bool,
+        typer.Option(
+            help="Force single phase charging",
+        ),
+    ] = None,
 ) -> None:
     """Get the EV interface status of the Peblar charger."""
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         async with await peblar.rest_api() as api:
+            if charge_limit is not None or force_single_phase is not None:
+                with console.status("[cyan]Adjusting...", spinner="toggle12"):
+                    await api.ev_interface(
+                        charge_current_limit=charge_limit * 1000
+                        if charge_limit
+                        else None,
+                        force_single_phase=force_single_phase,
+                    )
+                console.print("✅[green]Success")
+
             ev_interface = await api.ev_interface()
 
     table = Table(title="Peblar EV interface information")

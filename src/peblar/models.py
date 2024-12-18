@@ -17,6 +17,7 @@ from .const import (
     ChargeLimiter,
     CPState,
     LedIntensityMode,
+    PackageType,
     SmartChargingMode,
     SolarChargingMode,
     SoundVolume,
@@ -67,6 +68,13 @@ class PeblarReboot(BaseModel):
     reboot_type: str = field(
         default="HardReboot", metadata=field_options(alias="RebootType")
     )
+
+
+@dataclass(kw_only=True)
+class PeblarUpdate(BaseModel):
+    """Object holding the update payload for the Peblar charger."""
+
+    package_type: PackageType = field(metadata=field_options(alias="Package-Type"))
 
 
 @dataclass(kw_only=True)
@@ -516,6 +524,18 @@ class PeblarEVInterface(BaseModel):
     )
     cp_state: CPState = field(metadata=field_options(alias="CpState"))
     force_single_phase: bool = field(metadata=field_options(alias="Force1Phase"))
+
+
+@dataclass(kw_only=True)
+class PeblarEVInterfaceChange(BaseModel):
+    """Object holding the EV interface change payload."""
+
+    charge_current_limit: int | None = field(
+        default=None, metadata=field_options(alias="ChargeCurrentLimit")
+    )
+    force_single_phase: bool | None = field(
+        default=None, metadata=field_options(alias="Force1Phase")
+    )
 
 
 @dataclass(kw_only=True)

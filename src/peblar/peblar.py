@@ -13,6 +13,8 @@ from aiohttp import ClientResponseError, CookieJar, hdrs
 from aiohttp.client import ClientError, ClientSession
 from yarl import URL
 
+from peblar.const import PackageType
+
 from .exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -23,6 +25,7 @@ from .models import (
     BaseModel,
     PeblarApiToken,
     PeblarEVInterface,
+    PeblarEVInterfaceChange,
     PeblarHealth,
     PeblarLocalRestApiAccess,
     PeblarLogin,
@@ -32,6 +35,7 @@ from .models import (
     PeblarSmartCharging,
     PeblarSystem,
     PeblarSystemInformation,
+    PeblarUpdate,
     PeblarUserConfiguration,
     PeblarVersions,
 )
@@ -214,6 +218,14 @@ class Peblar:
             data=PeblarReboot(),
         )
 
+    async def update(self, *, package_type: PackageType) -> None:
+        """Update the Peblar charger to the latest version."""
+        await self.request(
+            URL("system/software/automatic-update/update"),
+            method=hdrs.METH_POST,
+            data=PeblarUpdate(package_type=package_type),
+        )
+
     async def system_information(self) -> PeblarSystemInformation:
         """Get information about the Peblar charger."""
         result = await self.request(URL("system/info"))
@@ -315,9 +327,25 @@ class PeblarApi:
 
         return await response.text()
 
-    async def ev_interface(self) -> PeblarEVInterface:
+    async def ev_interface(
+        self,
+        *,
+        charge_current_limit: int | None = None,
+        force_single_phase: bool | None = None,
+    ) -> PeblarEVInterface:
         """Get information about the EV interface."""
-        result = await self.request(URL("evinterface"))
+        url = URL("evinterface")
+        if charge_current_limit is not None or force_single_phase is not None:
+            await self.request(
+                url,
+                method=hdrs.METH_PATCH,
+                data=PeblarEVInterfaceChange(
+                    charge_current_limit=charge_current_limit,
+                    force_single_phase=force_single_phase,
+                ),
+            )
+
+        result = await self.request(url)
         return PeblarEVInterface.from_json(result)
 
     async def health(self) -> PeblarHealth:
