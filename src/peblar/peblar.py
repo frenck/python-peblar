@@ -13,8 +13,6 @@ from aiohttp import ClientResponseError, CookieJar, hdrs
 from aiohttp.client import ClientError, ClientSession
 from yarl import URL
 
-from peblar.const import PackageType
-
 from .exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -41,7 +39,7 @@ from .models import (
 )
 
 if TYPE_CHECKING:
-    from peblar.const import AccessMode, SmartChargingMode
+    from peblar.const import AccessMode, PackageType, SmartChargingMode
 
 
 @dataclass(kw_only=True)

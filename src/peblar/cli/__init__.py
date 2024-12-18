@@ -818,13 +818,13 @@ async def ev(
         ),
     ],
     charge_limit: Annotated[
-        int,
+        int | None,
         typer.Option(
             help="Charge current limit in A",
         ),
     ] = None,
     force_single_phase: Annotated[
-        bool,
+        bool | None,
         typer.Option(
             help="Force single phase charging",
         ),
