@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from dataclasses import dataclass
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import backoff
 import orjson
@@ -22,11 +22,16 @@ from .exceptions import (
 from .models import (
     BaseModel,
     PeblarApiToken,
+    PeblarLocalRestApiAccess,
     PeblarLogin,
+    PeblarModbusApiAccess,
     PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
 )
+
+if TYPE_CHECKING:
+    from peblar.const import AccessMode
 
 
 @dataclass(kw_only=True)
@@ -100,6 +105,56 @@ class Peblar:
                 password=password,
             ),
         )
+
+    async def rest_api(
+        self,
+        *,
+        enable: bool | None = None,
+        access_mode: AccessMode | None = None,
+    ) -> None:
+        """Get and control access to the REST API."""
+        user = await self.user_configuration()
+        if not user.local_rest_api_allowed:
+            msg = "The use of the local REST API is not allowed for this device."
+            raise PeblarError(msg)
+
+        if enable is not None and user.local_rest_api_enabled == enable:
+            enable = None
+
+        if access_mode is not None and user.local_rest_api_access_mode == access_mode:
+            access_mode = None
+
+        if enable is not None or access_mode:
+            await self.request(
+                URL("config/user"),
+                method=hdrs.METH_PATCH,
+                data=PeblarLocalRestApiAccess(enabled=enable, access_mode=access_mode),
+            )
+
+    async def modbus_api(
+        self,
+        *,
+        enable: bool | None = None,
+        access_mode: AccessMode | None = None,
+    ) -> None:
+        """Control access to the Modbus API."""
+        user = await self.user_configuration()
+        if not user.modbus_server_allowed:
+            msg = "The use of the Modbus API is not allowed for this device."
+            raise PeblarError(msg)
+
+        if user.modbus_server_enabled == enable:
+            enable = None
+
+        if user.modbus_server_access_mode == access_mode:
+            access_mode = None
+
+        if enable is not None or access_mode:
+            await self.request(
+                URL("config/user"),
+                method=hdrs.METH_PATCH,
+                data=PeblarModbusApiAccess(enabled=enable, access_mode=access_mode),
+            )
 
     async def api_token(self, *, generate_new_api_token: bool = False) -> str:
         """Get the API token."""

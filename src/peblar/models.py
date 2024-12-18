@@ -53,6 +53,30 @@ class PeblarApiToken(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarLocalRestApiAccess(BaseModel):
+    """Object holding the local REST API configuration of a Peblar charger."""
+
+    access_mode: AccessMode | None = field(
+        default=None, metadata=field_options(alias="LocalRestApiAccessMode")
+    )
+    enabled: bool | None = field(
+        default=None, metadata=field_options(alias="LocalRestApiEnable")
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarModbusApiAccess(BaseModel):
+    """Object holding the Modbus API configuration of a Peblar charger."""
+
+    access_mode: AccessMode | None = field(
+        default=None, metadata=field_options(alias="ModbusServerAccessMode")
+    )
+    enabled: bool | None = field(
+        default=None, metadata=field_options(alias="ModbusServerEnable")
+    )
+
+
+@dataclass(kw_only=True)
 class PeblarLogin(BaseModel):
     """Login request for Peblar chargers."""
 

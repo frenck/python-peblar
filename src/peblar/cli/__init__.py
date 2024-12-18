@@ -12,6 +12,7 @@ from rich.table import Table
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
+from peblar.const import AccessMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -209,6 +210,148 @@ async def api_token(
         border_style="cyan bold",
     )
     console.print(panel)
+
+
+@cli.command("rest-api")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+async def rest_api(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+        ),
+    ],
+    enable: Annotated[
+        bool,
+        typer.Option(
+            help="Enable the local REST API",
+        ),
+    ] = False,
+    disable: Annotated[
+        bool,
+        typer.Option(
+            help="Disable the local REST API",
+        ),
+    ] = False,
+    read: Annotated[
+        bool,
+        typer.Option(
+            help="Set access mode to read-only",
+        ),
+    ] = False,
+    write: Annotated[
+        bool,
+        typer.Option(
+            help="Set access mode to read-only",
+        ),
+    ] = False,
+) -> None:
+    """Get the API token of a Peblar charger."""
+    if enable and disable:
+        msg = "--disable cannot be used with --enable."
+        raise typer.BadParameter(msg)
+    if read and write:
+        msg = "--read cannot be used with --write."
+        raise typer.BadParameter(msg)
+    if not enable and not disable and not read and not write:
+        msg = "At least one of --enable, --disable, --read or --write must be used."
+        raise typer.BadParameter(msg)
+
+    with console.status("[cyan]Adjusting...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            if enable:
+                await peblar.rest_api(enable=True)
+            if disable:
+                await peblar.rest_api(enable=False)
+            if read:
+                await peblar.rest_api(access_mode=AccessMode.READ_ONLY)
+            if write:
+                await peblar.rest_api(access_mode=AccessMode.READ_WRITE)
+
+    console.print("✅[green]Success!")
+
+
+@cli.command("modbus")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+async def modbus(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+        ),
+    ],
+    enable: Annotated[
+        bool,
+        typer.Option(
+            help="Enable the Modbus API",
+        ),
+    ] = False,
+    disable: Annotated[
+        bool,
+        typer.Option(
+            help="Disable the Modbus API",
+        ),
+    ] = False,
+    read: Annotated[
+        bool,
+        typer.Option(
+            help="Set access mode to read-only",
+        ),
+    ] = False,
+    write: Annotated[
+        bool,
+        typer.Option(
+            help="Set access mode to read-only",
+        ),
+    ] = False,
+) -> None:
+    """Control access to the Modbus API."""
+    if enable and disable:
+        msg = "--disable cannot be used with --enable."
+        raise typer.BadParameter(msg)
+    if read and write:
+        msg = "--read cannot be used with --write."
+        raise typer.BadParameter(msg)
+    if not enable and not disable and not read and not write:
+        msg = "At least one of --enable, --disable, --read or --write must be used."
+        raise typer.BadParameter(msg)
+
+    with console.status("[cyan]Adjusting...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            if enable:
+                await peblar.modbus_api(enable=True)
+            if disable:
+                await peblar.modbus_api(enable=False)
+            if read:
+                await peblar.modbus_api(access_mode=AccessMode.READ_ONLY)
+            if write:
+                await peblar.modbus_api(access_mode=AccessMode.READ_WRITE)
+
+    console.print("✅[green]Success!")
 
 
 @cli.command("info")
