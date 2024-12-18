@@ -116,7 +116,7 @@ async def versions(
         ),
     ],
 ) -> None:
-    """Get the status of a Peblar charger."""
+    """Get the software version information the Peblar charger."""
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         current = await peblar.current_versions()
