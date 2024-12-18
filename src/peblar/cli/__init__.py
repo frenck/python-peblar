@@ -967,7 +967,7 @@ async def meter(
             + meter_data.current_phase_2
             + meter_data.current_phase_3
         )
-        / 100,
+        / 1000,
         3,
     )
     table.add_row("Total current", f"{total_current}A")
