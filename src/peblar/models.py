@@ -552,6 +552,11 @@ class PeblarMeter(BaseModel):
     power_phase_2: int = field(metadata=field_options(alias="PowerPhase2"))
     power_phase_3: int = field(metadata=field_options(alias="PowerPhase3"))
     power_total: int = field(metadata=field_options(alias="PowerTotal"))
-    voltage_phase_1: int = field(metadata=field_options(alias="VoltagePhase1"))
+    voltage_phase_1: int | None = field(metadata=field_options(alias="VoltagePhase1"))
     voltage_phase_2: int | None = field(metadata=field_options(alias="VoltagePhase2"))
     voltage_phase_3: int | None = field(metadata=field_options(alias="VoltagePhase3"))
+
+    @property
+    def current_total(self) -> int:
+        """Return the total current of the Peblar charger."""
+        return self.current_phase_1 + self.current_phase_2 + self.current_phase_3
