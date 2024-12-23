@@ -18,7 +18,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v4.2.2
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v5.0.1
+        uses: astral-sh/setup-uv@v5.1.0
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
