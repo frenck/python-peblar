@@ -166,7 +166,7 @@ dev-dependencies = [
   "aresponses==3.0.0",
   "codespell==2.3.0",
   "covdefaults==2.3.0",
-  "coverage[toml]==7.6.9",
+  "coverage[toml]==7.6.10",
   "mypy==1.14.0",
   "pre-commit==4.0.1",
   "pre-commit-hooks==5.0.0",
