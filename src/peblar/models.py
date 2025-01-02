@@ -141,14 +141,14 @@ class PeblarVersions(BaseModel):
 class PeblarSystemInformation(BaseModel):
     """Object holding information about the Peblar charger."""
 
-    bop_calibration_current_gain_a: int = field(
-        metadata=field_options(alias="BopCalIGainA")
+    bop_calibration_current_gain_a: int | None = field(
+        default=None, metadata=field_options(alias="BopCalIGainA")
     )
-    bop_calibration_current_gain_b: int = field(
-        metadata=field_options(alias="BopCalIGainB")
+    bop_calibration_current_gain_b: int | None = field(
+        default=None, metadata=field_options(alias="BopCalIGainB")
     )
-    bop_calibration_current_gain_c: int = field(
-        metadata=field_options(alias="BopCalIGainC")
+    bop_calibration_current_gain_c: int | None = field(
+        default=None, metadata=field_options(alias="BopCalIGainC")
     )
     can_change_charging_phases: bool = field(
         metadata=field_options(alias="CanChangeChargingPhases")
@@ -199,7 +199,9 @@ class PeblarSystemInformation(BaseModel):
     hardware_one_or_three_phase: int = field(
         metadata=field_options(alias="HwOneOrThreePhase")
     )
-    hardware_uk_compliant: bool = field(metadata=field_options(alias="HwUKCompliant"))
+    hardware_uk_compliant: bool | None = field(
+        default=None, metadata=field_options(alias="HwUKCompliant")
+    )
     mainboard_part_number: str = field(metadata=field_options(alias="MainboardPn"))
     mainboard_serial_number: str = field(metadata=field_options(alias="MainboardSn"))
     meter_calibration_current_gain_a: int = field(
