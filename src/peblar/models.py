@@ -409,9 +409,9 @@ class PeblarUserConfiguration(BaseModel):
     def __pre_deserialize__(cls, d: dict[Any, Any]) -> dict[Any, Any]:
         """Pre deserialize hook for PeblarUserConfiguration object."""
         d["SolarChargingSourceParameters"] = orjson.loads(
-            d.get("SolarChargingSourceParameters", "{}")
+            d.get("SolarChargingSourceParameters") or "{}"
         )
-        d["BopSourceParameters"] = orjson.loads(d.get("BopSourceParameters", "{}"))
+        d["BopSourceParameters"] = orjson.loads(d.get("BopSourceParameters") or "{}")
         return d
 
     @classmethod
