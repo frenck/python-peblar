@@ -115,10 +115,12 @@ class PeblarLogin(BaseModel):
 class PeblarVersions(BaseModel):
     """Object holding the version information of the Peblar charger."""
 
-    customization: str = field(metadata=field_options(alias="Customization"))
+    customization: str | None = field(
+        default=None, metadata=field_options(alias="Customization")
+    )
     firmware: str = field(metadata=field_options(alias="Firmware"))
 
-    customization_version: AwesomeVersion
+    customization_version: AwesomeVersion | None = None
     firmware_version: AwesomeVersion
 
     @classmethod
@@ -127,7 +129,8 @@ class PeblarVersions(BaseModel):
         # Strip off everything until the first `-` for the customization
         # for AwesomeVersion to parse it correctly.
         # E.g., `Peblar-1.8`
-        d["customization_version"] = d.get("Customization", "").split("-")[-1]
+        if customization := d.get("Customization"):
+            d["customization_version"] = customization.split("-")[-1]
 
         # Strip off everything after the first + for the firmware
         # for AwesomeVersion to parse it correctly.
