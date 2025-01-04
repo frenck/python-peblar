@@ -118,10 +118,10 @@ class PeblarVersions(BaseModel):
     customization: str | None = field(
         default=None, metadata=field_options(alias="Customization")
     )
-    firmware: str = field(metadata=field_options(alias="Firmware"))
+    firmware: str | None = field(default=None, metadata=field_options(alias="Firmware"))
 
     customization_version: AwesomeVersion | None = None
-    firmware_version: AwesomeVersion
+    firmware_version: AwesomeVersion | None = None
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[Any, Any]) -> dict[Any, Any]:
@@ -135,7 +135,8 @@ class PeblarVersions(BaseModel):
         # Strip off everything after the first + for the firmware
         # for AwesomeVersion to parse it correctly.
         # E.g., `1.6.1+1+WL-1.0`
-        d["firmware_version"] = d.get("Firmware", "").split("+")[0]
+        if firmware := d.get("Firmware"):
+            d["firmware_version"] = firmware.split("+")[0]
         return d
 
 
