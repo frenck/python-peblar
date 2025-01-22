@@ -110,7 +110,7 @@ class ChargeLimiter(StrEnum):
     LOCAL_REST_API = "Local REST API"
     """Charging limited by the maximum current by local REST API."""
 
-    LOCAL_SCHEDULED = "Local scheduled charging"
+    LOCAL_SCHEDULED_CHARGING = "Local scheduled charging"
     """Charging limited by the local schedule."""
 
     OCPP_SMART_CHARGING = "OCPP smart charging"
