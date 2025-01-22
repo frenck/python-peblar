@@ -164,7 +164,7 @@ max-complexity = 25
 prerelease = "allow"
 dev-dependencies = [
   "aresponses==3.0.0",
-  "codespell==2.3.0",
+  "codespell==2.4.0",
   "covdefaults==2.3.0",
   "coverage[toml]==7.6.10",
   "mypy==1.14.1",
