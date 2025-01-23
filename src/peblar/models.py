@@ -176,12 +176,8 @@ class PeblarSystemInformation(BaseModel):
     hardware_firmware_compatibility: str = field(
         metadata=field_options(alias="HwFwCompat")
     )
-    hardware_has_4p_relay: bool = field(metadata=field_options(alias="HwHas4pRelay"))
     hardware_has_bop: bool = field(metadata=field_options(alias="HwHasBop"))
     hardware_has_buzzer: bool = field(metadata=field_options(alias="HwHasBuzzer"))
-    hardware_has_dual_socket: bool = field(
-        metadata=field_options(alias="HwHasDualSocket")
-    )
     hardware_has_eichrecht_laser_marking: bool = field(
         metadata=field_options(alias="HwHasEichrechtLaserMarking")
     )
@@ -195,16 +191,12 @@ class PeblarSystemInformation(BaseModel):
     hardware_has_plc: bool = field(metadata=field_options(alias="HwHasPlc"))
     hardware_has_rfid: bool = field(metadata=field_options(alias="HwHasRfid"))
     hardware_has_rs485: bool = field(metadata=field_options(alias="HwHasRs485"))
-    hardware_has_shutter: bool = field(metadata=field_options(alias="HwHasShutter"))
     hardware_has_socket: bool = field(metadata=field_options(alias="HwHasSocket"))
     hardware_has_tpm: bool = field(metadata=field_options(alias="HwHasTpm"))
     hardware_has_wlan: bool = field(metadata=field_options(alias="HwHasWlan"))
     hardware_max_current: int = field(metadata=field_options(alias="HwMaxCurrent"))
     hardware_one_or_three_phase: int = field(
         metadata=field_options(alias="HwOneOrThreePhase")
-    )
-    hardware_uk_compliant: bool | None = field(
-        default=None, metadata=field_options(alias="HwUKCompliant")
     )
     mainboard_part_number: str = field(metadata=field_options(alias="MainboardPn"))
     mainboard_serial_number: str = field(metadata=field_options(alias="MainboardSn"))
