@@ -686,7 +686,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row(
         "User defined household power limit",
-        f"{round(config.user_defined_household_power_limit/1000, 3)} kW",
+        f"{round(config.user_defined_household_power_limit / 1000, 3)} kW",
     )
     table.add_row(
         "User keep socket locked", convert_to_string(config.user_keep_socket_locked)
@@ -852,11 +852,11 @@ async def ev(
 
     table.add_row(
         "Charge current limit",
-        f"{round(ev_interface.charge_current_limit/1000,3)}A",
+        f"{round(ev_interface.charge_current_limit / 1000, 3)}A",
     )
     table.add_row(
         "Charge current limit actual",
-        f"{round(ev_interface.charge_current_limit_actual/1000, 3)}A",
+        f"{round(ev_interface.charge_current_limit_actual / 1000, 3)}A",
     )
     table.add_row(
         "Charge current limit source", ev_interface.charge_current_limit_source
@@ -949,8 +949,8 @@ async def meter(
     table.add_column("Property", style="cyan bold")
     table.add_column("Value", style="bold")
 
-    table.add_row("Energy session", f"{round(meter_data.energy_session/1000, 3)}kWh")
-    table.add_row("Energy total", f"{round(meter_data.energy_total/1000, 3)}kWh")
+    table.add_row("Energy session", f"{round(meter_data.energy_session / 1000, 3)}kWh")
+    table.add_row("Energy total", f"{round(meter_data.energy_total / 1000, 3)}kWh")
 
     table.add_section()
 
@@ -971,9 +971,9 @@ async def meter(
         3,
     )
     table.add_row("Total current", f"{total_current}A")
-    table.add_row("Current Phase 1", f"{round(meter_data.current_phase_1/1000,3)}A")
-    table.add_row("Current Phase 2", f"{round(meter_data.current_phase_2/1000,3)}A")
-    table.add_row("Current Phase 3", f"{round(meter_data.current_phase_3/1000,3)}A")
+    table.add_row("Current Phase 1", f"{round(meter_data.current_phase_1 / 1000, 3)}A")
+    table.add_row("Current Phase 2", f"{round(meter_data.current_phase_2 / 1000, 3)}A")
+    table.add_row("Current Phase 3", f"{round(meter_data.current_phase_3 / 1000, 3)}A")
 
     table.add_section()
 
