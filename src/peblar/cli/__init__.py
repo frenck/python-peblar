@@ -497,7 +497,6 @@ async def system_information(
     table.add_row("Mainboard part number", info.mainboard_part_number)
     table.add_row("Mainboard serial number", info.mainboard_serial_number)
     table.add_row("Meter firmware version", info.meter_firmware_version)
-    table.add_row("NOR flash", convert_to_string(info.nor_flash))
     table.add_row("Product model name", info.product_model_name)
     table.add_row("Product number", info.product_number)
     table.add_row("Product serial number", info.product_serial_number)

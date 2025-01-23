@@ -237,7 +237,6 @@ class PeblarSystemInformation(BaseModel):
         metadata=field_options(alias="MeterCalVGainC")
     )
     meter_firmware_version: str = field(metadata=field_options(alias="MeterFwIdent"))
-    nor_flash: str = field(metadata=field_options(alias="NorFlash"))
     product_model_name: str = field(metadata=field_options(alias="ProductModelName"))
     product_number: str = field(metadata=field_options(alias="ProductPn"))
     product_serial_number: str = field(metadata=field_options(alias="ProductSn"))
