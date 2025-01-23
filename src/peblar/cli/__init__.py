@@ -467,14 +467,8 @@ async def system_information(
         "Hardware fixed cable rating",
         f"{info.hardware_fixed_cable_rating}A",
     )
-    table.add_row(
-        "Hardware has 4P relay", convert_to_string(info.hardware_has_4p_relay)
-    )
     table.add_row("Hardware has BOP", convert_to_string(info.hardware_has_bop))
     table.add_row("Hardware has buzzer", convert_to_string(info.hardware_has_buzzer))
-    table.add_row(
-        "Hardware has dual socket", convert_to_string(info.hardware_has_dual_socket)
-    )
     table.add_row(
         "Hardware has Eichrecht laser marking",
         convert_to_string(info.hardware_has_eichrecht_laser_marking),
@@ -491,7 +485,6 @@ async def system_information(
     table.add_row("Hardware has PLC", convert_to_string(info.hardware_has_plc))
     table.add_row("Hardware has RFID", convert_to_string(info.hardware_has_rfid))
     table.add_row("Hardware has RS485", convert_to_string(info.hardware_has_rs485))
-    table.add_row("Hardware has shutter", convert_to_string(info.hardware_has_shutter))
     table.add_row("Hardware has socket", convert_to_string(info.hardware_has_socket))
     table.add_row("Hardware has TPM", convert_to_string(info.hardware_has_tpm))
     table.add_row("Hardware has WLAN", convert_to_string(info.hardware_has_wlan))
@@ -499,9 +492,6 @@ async def system_information(
     table.add_row(
         "Hardware one or three phase",
         convert_to_string(info.hardware_one_or_three_phase),
-    )
-    table.add_row(
-        "Hardware UK compliant", convert_to_string(info.hardware_uk_compliant)
     )
     table.add_row("Hostname", info.hostname)
     table.add_row("Mainboard part number", info.mainboard_part_number)
