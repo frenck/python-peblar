@@ -59,4 +59,4 @@ jobs:
           uv run coverage combine coverage*/.coverage*
           uv run coverage xml -i
       - name: 🚀 Upload coverage report
-        uses: codecov/codecov-action@v5.3.0
+        uses: codecov/codecov-action@v5.3.1
