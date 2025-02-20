@@ -649,7 +649,7 @@ dev = [
     { name = "pytest-asyncio", specifier = "==0.25.3" },
     { name = "pytest-cov", specifier = "==6.0.0" },
     { name = "ruff", specifier = "==0.9.7" },
-    { name = "syrupy", specifier = "==4.8.1" },
+    { name = "syrupy", specifier = "==4.8.2" },
     { name = "yamllint", specifier = "==1.35.1" },
 ]
 
@@ -954,14 +954,14 @@ wheels = [
 
 [[package]]
 name = "syrupy"
-version = "4.8.1"
+version = "4.8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/32/8b56491ed50ae103c2db14885c29fe765170bdf044fe5868548113da35ef/syrupy-4.8.1.tar.gz", hash = "sha256:8da8c0311e6d92de0b15767768c6ab98982b7b4a4c67083c08fbac3fbad4d44c", size = 50192 }
+sdist = { url = "https://files.pythonhosted.org/packages/09/9b/288dd69ba9a32a22da873fe8a56fcbdc7f432ce9a29df65432ab3708ad40/syrupy-4.8.2.tar.gz", hash = "sha256:8418748be9cc050bf156d2e6c551dbc1768d591d36652e945a52ab3b0303a899", size = 50413 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/47/5e8f44ec0f287b08e8c1f3fc63fe1fbe182f07bf606eec903d7827b95e51/syrupy-4.8.1-py3-none-any.whl", hash = "sha256:274f97cbaf44175f5e478a2f3a53559d31f41c66c6bf28131695f94ac893ea00", size = 50326 },
+    { url = "https://files.pythonhosted.org/packages/10/36/e42eae0bb6bcb34287e8b978b7f9d539423f8976eee1a69d47f3aef26621/syrupy-4.8.2-py3-none-any.whl", hash = "sha256:1fee874d422cfb1342aa746a65936d6500178beeb6fe26cb3a970c626fbe6058", size = 50476 },
 ]
 
 [[package]]

@@ -175,7 +175,7 @@ dev-dependencies = [
   "pytest-asyncio==0.25.3",
   "pytest-cov==6.0.0",
   "ruff==0.9.7",
-  "syrupy==4.8.1",
+  "syrupy==4.8.2",
   "yamllint==1.35.1",
 ]
 
