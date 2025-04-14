@@ -131,7 +131,7 @@ jobs:
       - name: 🏗 Install dependencies
         run: uv sync --frozen --dev
       - name: 🏗 Set up Node.js
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@v4.4.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
