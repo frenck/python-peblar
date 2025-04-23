@@ -1,7 +1,7 @@
 [project]
 name = "peblar"
 version = "0.0.0"
-license = { text = "MIT License" }
+license = "MIT"
 description = "Asynchronous Python client for Peblar EV chargers."
 authors = [{ name = "Franck Nijhof", email = "opensource@frenck.dev"}]
 maintainers = [{ name = "Franck Nijhof", email = "opensource@frenck.dev"}]
@@ -180,5 +180,5 @@ dev-dependencies = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
