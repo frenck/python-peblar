@@ -171,7 +171,7 @@ dev-dependencies = [
   "pre-commit==4.3.0",
   "pre-commit-hooks==6.0.0",
   "pylint==3.3.8",
-  "pytest==8.4.1",
+  "pytest==8.4.2",
   "pytest-asyncio==1.1.0",
   "pytest-cov==6.2.1",
   "ruff==0.12.11",
