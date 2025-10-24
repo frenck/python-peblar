@@ -46,7 +46,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: ⬇️ Download coverage data
-        uses: actions/download-artifact@v5.0.0
+        uses: actions/download-artifact@v6.0.0
       - name: 🏗 Set up uv
         uses: astral-sh/setup-uv@v7.1.1
         with:
