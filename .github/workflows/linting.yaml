@@ -18,7 +18,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v7.1.1
+        uses: astral-sh/setup-uv@v7.1.2
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
@@ -34,7 +34,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v7.1.1
+        uses: astral-sh/setup-uv@v7.1.2
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
@@ -52,7 +52,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v7.1.1
+        uses: astral-sh/setup-uv@v7.1.2
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
@@ -92,7 +92,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v7.1.1
+        uses: astral-sh/setup-uv@v7.1.2
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
@@ -108,7 +108,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v7.1.1
+        uses: astral-sh/setup-uv@v7.1.2
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
@@ -124,7 +124,7 @@ jobs:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v5.0.0
       - name: 🏗 Set up uv
-        uses: astral-sh/setup-uv@v7.1.1
+        uses: astral-sh/setup-uv@v7.1.2
         with:
           enable-cache: true
           python-version: ${{ env.DEFAULT_PYTHON }}
