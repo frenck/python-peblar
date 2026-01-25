@@ -18,6 +18,7 @@ from peblar.exceptions import (
     PeblarConnectionError,
     PeblarUnsupportedFirmwareVersionError,
 )
+from peblar.models import PeblarSetUserConfiguration
 from peblar.peblar import Peblar
 
 from .async_typer import AsyncTyper
@@ -528,10 +529,25 @@ async def user_configuration(  # pylint: disable=too-many-statements
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    charge_current_limit: Annotated[
+        int,
+        typer.Option(
+            help="Set the User defined charge limit current",
+            show_default=False,
+        ),
+    ] = 0,
 ) -> None:
-    """List information about the user configuration."""
+    """Show or change the user configuration."""
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
+        if charge_current_limit:
+            await peblar.set_user_configuration(
+                PeblarSetUserConfiguration(
+                    user_defined_charge_limit_current=charge_current_limit
+                )
+            )
+            console.print("✅[green]Success!")
+            return
         config = await peblar.user_configuration()
 
     table = Table(title="Peblar user configuration")

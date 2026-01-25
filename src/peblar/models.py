@@ -430,6 +430,15 @@ class PeblarUserConfiguration(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarSetUserConfiguration(BaseModel):
+    """Object to set user configuration of a Peblar charger."""
+
+    user_defined_charge_limit_current: int | None = field(
+        default=None, metadata=field_options(alias="UserDefinedChargeLimitCurrent")
+    )
+
+
+@dataclass(kw_only=True)
 class PeblarSmartCharging(BaseModel):
     """Object holding the configuration of the Peblar charger."""
 
