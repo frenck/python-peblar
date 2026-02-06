@@ -30,6 +30,7 @@ from .models import (
     PeblarMeter,
     PeblarModbusApiAccess,
     PeblarReboot,
+    PeblarSetUserConfiguration,
     PeblarSmartCharging,
     PeblarSystem,
     PeblarSystemInformation,
@@ -232,6 +233,15 @@ class Peblar:
     async def user_configuration(self) -> PeblarUserConfiguration:
         """Get information about the user configuration."""
         result = await self.request(URL("config/user"))
+        return PeblarUserConfiguration.from_json(result)
+
+    async def set_user_configuration(
+        self, user_configuration: PeblarSetUserConfiguration
+    ) -> PeblarUserConfiguration:
+        """Set (part of) the user configuration."""
+        result = await self.request(
+            URL("config/user"), method=hdrs.METH_PATCH, data=user_configuration
+        )
         return PeblarUserConfiguration.from_json(result)
 
     async def close(self) -> None:
