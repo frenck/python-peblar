@@ -1,6 +1,8 @@
 """Asynchronous Python client for Peblar EV chargers."""
 
 import asyncio
+import contextlib
+import io
 import sys
 from typing import Annotated
 
@@ -24,6 +26,14 @@ from .async_typer import AsyncTyper
 
 cli = AsyncTyper(help="Peblar CLI", no_args_is_help=True, add_completion=False)
 console = Console()
+quiet_console = Console(file=io.StringIO())
+
+QUIET_OPTION = typer.Option(
+    "--quiet",
+    "-q",
+    help="Suppress console output",
+    envvar="PEBLAR_QUIET",
+)
 
 
 def convert_to_string(value: object) -> str:
@@ -115,6 +125,7 @@ async def versions(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Get the software version information the Peblar charger."""
     async with Peblar(host=host) as peblar:
@@ -122,6 +133,7 @@ async def versions(
         current = await peblar.current_versions()
         available = await peblar.available_versions()
 
+    out = quiet_console if quiet else console
     table = Table(title="Peblar charger versions")
     table.add_column("Type", style="cyan bold")
     table.add_column("Installed version", style="cyan bold")
@@ -141,7 +153,7 @@ async def versions(
         f"{customization} {available.customization}",
     )
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("identify")
@@ -165,13 +177,20 @@ async def identify(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Flash the LEDs on the Peblar charger to identify it."""
-    with console.status("[cyan]Identifying...", spinner="toggle12"):
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Identifying...", spinner="toggle12")
+    )
+    with status_ctx:
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.identify()
-    console.print("✅[green]Success!")
+    out.print("✅[green]Success!")
 
 
 @cli.command("reboot")
@@ -195,13 +214,20 @@ async def reboot(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Reboot the Peblar charger."""
-    with console.status("[cyan]Rebooting...", spinner="toggle12"):
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Rebooting...", spinner="toggle12")
+    )
+    with status_ctx:
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.reboot()
-    console.print("✅[green]Success!")
+    out.print("✅[green]Success!")
 
 
 @cli.command("update")
@@ -237,6 +263,7 @@ async def update(
             help="Update the customization",
         ),
     ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Update the Peblar charger."""
     if not firmware and not customization:
@@ -246,7 +273,13 @@ async def update(
         msg = "--firmware cannot be used with --customization."
         raise typer.BadParameter(msg)
 
-    with console.status("[cyan]Updating...", spinner="toggle12"):
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Updating...", spinner="toggle12")
+    )
+    with status_ctx:
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             if firmware:
@@ -254,7 +287,7 @@ async def update(
             if customization:
                 await peblar.update(package_type=PackageType.CUSTOMIZATION)
 
-    console.print("✅[green]Success!")
+    out.print("✅[green]Success!")
 
 
 @cli.command("api")
@@ -309,6 +342,7 @@ async def rest_api(
             help="Generate a new API token",
         ),
     ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Control access to the Local REST API."""
     if enable and disable:
@@ -318,10 +352,16 @@ async def rest_api(
         msg = "--read cannot be used with --write."
         raise typer.BadParameter(msg)
 
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adjusting...", spinner="toggle12")
+    )
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         if enable or disable or read or write or generate_new_token:
-            with console.status("[cyan]Adjusting...", spinner="toggle12"):
+            with status_ctx:
                 if enable:
                     await peblar.rest_api(enable=True)
                 if disable:
@@ -332,7 +372,7 @@ async def rest_api(
                     await peblar.rest_api(access_mode=AccessMode.READ_WRITE)
                 if generate_new_token:
                     await peblar.api_token(generate_new_api_token=generate_new_token)
-            console.print("✅[green]Success!")
+            out.print("✅[green]Success!")
 
         config = await peblar.user_configuration()
         token = await peblar.api_token()
@@ -346,7 +386,7 @@ async def rest_api(
     )
     table.add_row("Local REST API access mode", config.local_rest_api_access_mode.value)
     table.add_row("Local REST API token", token)
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("modbus")
@@ -395,6 +435,7 @@ async def modbus(
             help="Set access mode to read-only",
         ),
     ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Control access to the Modbus API."""
     if enable and disable:
@@ -404,10 +445,16 @@ async def modbus(
         msg = "--read cannot be used with --write."
         raise typer.BadParameter(msg)
 
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adjusting...", spinner="toggle12")
+    )
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         if enable or disable or read or write:
-            with console.status("[cyan]Adjusting...", spinner="toggle12"):
+            with status_ctx:
                 if enable:
                     await peblar.modbus_api(enable=True)
                 if disable:
@@ -416,7 +463,7 @@ async def modbus(
                     await peblar.modbus_api(access_mode=AccessMode.READ_ONLY)
                 if write:
                     await peblar.modbus_api(access_mode=AccessMode.READ_WRITE)
-            console.print("✅[green]Success!")
+            out.print("✅[green]Success!")
         config = await peblar.user_configuration()
 
     table = Table(title="Peblar Modbus API configuration")
@@ -426,7 +473,7 @@ async def modbus(
     table.add_row("Modbus API enabled", convert_to_string(config.modbus_server_enabled))
     table.add_row("Modbus API access mode", config.modbus_server_access_mode.value)
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("info")
@@ -450,8 +497,10 @@ async def system_information(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """List information about the Peblar charger."""
+    out = quiet_console if quiet else console
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         info = await peblar.system_information()
@@ -504,7 +553,7 @@ async def system_information(
     table.add_row("WLAN AP MAC address", info.wlan_ap_mac_address)
     table.add_row("WLAN MAC address", info.wlan_mac_address)
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("config")
@@ -528,8 +577,10 @@ async def user_configuration(  # pylint: disable=too-many-statements
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """List information about the user configuration."""
+    out = quiet_console if quiet else console
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         config = await peblar.user_configuration()
@@ -701,7 +752,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
         }.get(config.smart_charging, "Unknown")
     table.add_row("Smart charging mode", smart_charging_mode)
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("smart-charging")
@@ -756,6 +807,7 @@ async def smart_charging(
             help="Scheduled charging.",
         ),
     ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Control the smart charging mode."""
     # Only one of the charging modes can be selected, and at least one must be selected.
@@ -768,7 +820,13 @@ async def smart_charging(
         )
         raise typer.BadParameter(msg)
 
-    with console.status("[cyan]Adjusting...", spinner="toggle12"):
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adjusting...", spinner="toggle12")
+    )
+    with status_ctx:
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             if default:
@@ -782,7 +840,7 @@ async def smart_charging(
             if scheduled:
                 await peblar.smart_charging(SmartChargingMode.SCHEDULED)
 
-    console.print("✅[green]Success!")
+    out.print("✅[green]Success!")
 
 
 @cli.command("ev")
@@ -818,20 +876,27 @@ async def ev(
             help="Force single phase charging",
         ),
     ] = None,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Get the EV interface status of the Peblar charger."""
+    out = quiet_console if quiet else console
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adjusting...", spinner="toggle12")
+    )
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         async with await peblar.rest_api() as api:
             if charge_limit is not None or force_single_phase is not None:
-                with console.status("[cyan]Adjusting...", spinner="toggle12"):
+                with status_ctx:
                     await api.ev_interface(
                         charge_current_limit=charge_limit * 1000
                         if charge_limit
                         else None,
                         force_single_phase=force_single_phase,
                     )
-                console.print("✅[green]Success")
+                out.print("✅[green]Success")
 
             ev_interface = await api.ev_interface()
 
@@ -866,7 +931,7 @@ async def ev(
         "Force single phase", convert_to_string(ev_interface.force_single_phase)
     )
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("health")
@@ -890,8 +955,10 @@ async def health(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Get the health status of the Peblar charger."""
+    out = quiet_console if quiet else console
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         async with await peblar.rest_api() as api:
@@ -903,7 +970,7 @@ async def health(
 
     table.add_row("API Access mode", data.access_mode.value)
     table.add_row("API version", convert_to_string(data.api_version))
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("meter")
@@ -927,8 +994,10 @@ async def meter(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Get meter status of the Peblar charger."""
+    out = quiet_console if quiet else console
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         async with await peblar.rest_api() as api:
@@ -970,7 +1039,7 @@ async def meter(
     table.add_row("Voltage Phase 2", f"{meter_data.voltage_phase_2 or 0}V")
     table.add_row("Voltage Phase 3", f"{meter_data.voltage_phase_3 or 0}V")
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("system")
@@ -994,8 +1063,10 @@ async def system(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Get the status of the Peblar charger."""
+    out = quiet_console if quiet else console
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         async with await peblar.rest_api() as api:
@@ -1037,12 +1108,15 @@ async def system(
     else:
         table.add_row("Cellular signal strength", "Cellular not connected")
 
-    console.print(table)
+    out.print(table)
 
 
 @cli.command("scan")
-async def scan() -> None:
+async def scan(
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
     """Scan for Peblar chargers on the network."""
+    out = quiet_console if quiet else console
     zeroconf = AsyncZeroconf()
     background_tasks = set()
 
@@ -1081,7 +1155,7 @@ async def scan() -> None:
         if info.properties is None or not str(info.server).startswith("PBLR-"):
             return
 
-        console.print(f"[cyan bold]Found service {info.server}: is a Peblar charger 🎉")
+        out.print(f"[cyan bold]Found service {info.server}: is a Peblar charger 🎉")
 
         table.add_row(
             f"{str(info.server).rstrip('.')}\n"
@@ -1090,10 +1164,10 @@ async def scan() -> None:
             info.properties[b"version"].decode(),  # type: ignore[union-attr]
         )
 
-    console.print("[green]Scanning for Peblar chargers...")
-    console.print("[red]Press Ctrl-C to exit\n")
+    out.print("[green]Scanning for Peblar chargers...")
+    out.print("[red]Press Ctrl-C to exit\n")
 
-    with Live(table, console=console, refresh_per_second=4):
+    with Live(table, console=out, refresh_per_second=4):
         browser = AsyncServiceBrowser(
             zeroconf.zeroconf,
             "_http._tcp.local.",
@@ -1106,7 +1180,7 @@ async def scan() -> None:
         except KeyboardInterrupt:
             pass
         finally:
-            console.print("\n[green]Control-C pressed, stopping scan")
+            out.print("\n[green]Control-C pressed, stopping scan")
             await browser.async_cancel()
             await zeroconf.async_close()
 
