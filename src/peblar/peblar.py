@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, TypedDict
 
 import backoff
 import orjson
@@ -30,6 +30,7 @@ from .models import (
     PeblarMeter,
     PeblarModbusApiAccess,
     PeblarReboot,
+    PeblarRfidToken,
     PeblarSmartCharging,
     PeblarSystem,
     PeblarSystemInformation,
@@ -40,6 +41,19 @@ from .models import (
 
 if TYPE_CHECKING:
     from peblar.const import AccessMode, PackageType, SmartChargingMode
+
+
+class _RfidTokenPayload(TypedDict):
+    """Single RFID token payload returned by the standalone list endpoint."""
+
+    RfidTokenUid: str
+    RfidTokenDescription: str
+
+
+class _RfidTokenListEnvelope(TypedDict):
+    """RFID token list response envelope."""
+
+    Tokens: list[_RfidTokenPayload]
 
 
 @dataclass(kw_only=True)
@@ -207,6 +221,35 @@ class Peblar:
     async def identify(self) -> None:
         """Identify the Peblar charger."""
         await self.request(URL("system/identify"), method=hdrs.METH_PUT)
+
+    async def rfid_tokens(self) -> list[PeblarRfidToken]:
+        """Get the list of RFID tokens in the standalone auth list."""
+        result = await self.request(URL("config/auth/standalonelist"))
+        data: _RfidTokenListEnvelope = orjson.loads(result)
+        return [PeblarRfidToken.from_dict(item) for item in data["Tokens"]]
+
+    async def add_rfid_token(
+        self,
+        *,
+        rfid_token_uid: str,
+        rfid_token_description: str,
+    ) -> None:
+        """Add an RFID token to the standalone auth list."""
+        await self.request(
+            URL("config/auth/standalonelist"),
+            method=hdrs.METH_POST,
+            data=PeblarRfidToken(
+                rfid_token_uid=rfid_token_uid,
+                rfid_token_description=rfid_token_description,
+            ),
+        )
+
+    async def delete_rfid_token(self, *, uid: str) -> None:
+        """Remove an RFID token from the standalone auth list."""
+        await self.request(
+            URL("config/auth/standalonelist") / uid,
+            method=hdrs.METH_DELETE,
+        )
 
     async def reboot(self) -> None:
         """Reboot the Peblar charger."""

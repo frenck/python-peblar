@@ -112,6 +112,16 @@ class PeblarLogin(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarRfidToken(BaseModel):
+    """RFID token in the standalone auth list."""
+
+    rfid_token_uid: str = field(metadata=field_options(alias="RfidTokenUid"))
+    rfid_token_description: str = field(
+        metadata=field_options(alias="RfidTokenDescription")
+    )
+
+
+@dataclass(kw_only=True)
 class PeblarVersions(BaseModel):
     """Object holding the version information of the Peblar charger."""
 

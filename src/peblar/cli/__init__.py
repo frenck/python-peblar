@@ -785,6 +785,129 @@ async def smart_charging(
     console.print("✅[green]Success!")
 
 
+@cli.command("rfid-tokens")
+async def rfid_tokens(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+) -> None:
+    """List RFID tokens in the standalone auth list."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        tokens = await peblar.rfid_tokens()
+
+    table = Table(title="Peblar RFID tokens")
+    table.add_column("UID", style="cyan bold")
+    table.add_column("Description", style="cyan bold")
+
+    for token in tokens:
+        table.add_row(token.rfid_token_uid, token.rfid_token_description)
+
+    console.print(table)
+
+
+@cli.command("add-rfid-token")
+async def add_rfid_token(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    uid: Annotated[
+        str,
+        typer.Option(
+            help="RFID token UID",
+            prompt="UID",
+            show_default=False,
+        ),
+    ],
+    description: Annotated[
+        str,
+        typer.Option(
+            help="RFID token description",
+            prompt="Description",
+            show_default=False,
+        ),
+    ],
+) -> None:
+    """Add an RFID token to the standalone auth list."""
+    with console.status("[cyan]Adding RFID token...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.add_rfid_token(
+                rfid_token_uid=uid,
+                rfid_token_description=description,
+            )
+    console.print("✅[green]Success!")
+
+
+@cli.command("del-rfid-token")
+async def del_rfid_token(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    uid: Annotated[
+        str,
+        typer.Option(
+            help="RFID token UID to remove",
+            prompt="UID",
+        ),
+    ],
+) -> None:
+    """Remove an RFID token from the standalone auth list."""
+    with console.status("[cyan]Removing RFID token...", spinner="toggle12"):
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.delete_rfid_token(uid=uid)
+    console.print("✅[green]Success!")
+
+
 @cli.command("ev")
 async def ev(
     host: Annotated[
