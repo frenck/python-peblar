@@ -1,0 +1,13 @@
+{
+	"Tokens" :
+	[
+		{
+			"RfidTokenDescription" : "My RFID Card",
+			"RfidTokenUid" : "0123456789ABCD"
+		},
+		{
+			"RfidTokenDescription" : "My Other RFID Card",
+			"RfidTokenUid" : "0123456789ABCE"
+		}
+	]
+}
