@@ -396,6 +396,25 @@ async def test_api_ev_interface_patch_then_read() -> None:
     assert ev.charge_current_limit == 16000
 
 
+async def test_api_ev_interface_lock_state() -> None:
+    """Test lock_state is parsed from a socket charger response."""
+    body = patched_fixture("ev_interface.json", LockState=True)
+    with aioresponses() as mocked:
+        mocked.get(API_EV_URL, status=200, body=body)
+        async with PeblarApi(host=HOST, token="t") as api:
+            ev = await api.ev_interface()
+    assert ev.lock_state is True
+
+
+async def test_api_ev_interface_lock_state_absent() -> None:
+    """Test lock_state is None on fixed-cable chargers (field absent)."""
+    with aioresponses() as mocked:
+        mocked.get(API_EV_URL, status=200, body=load_fixture("ev_interface.json"))
+        async with PeblarApi(host=HOST, token="t") as api:
+            ev = await api.ev_interface()
+    assert ev.lock_state is None
+
+
 async def test_api_401_authentication_error() -> None:
     """Test PeblarApi 401 is surfaced as PeblarAuthenticationError."""
     with aioresponses() as mocked:
