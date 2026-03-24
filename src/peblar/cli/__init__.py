@@ -202,6 +202,42 @@ async def identify(
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
+@cli.command("unlock")
+async def unlock(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Unlock the socket of the Peblar charger."""
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Unlocking...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.socket_unlock()
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
 @cli.command("reboot")
 async def reboot(
     host: Annotated[

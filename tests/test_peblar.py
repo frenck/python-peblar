@@ -76,6 +76,19 @@ async def test_identify() -> None:
             await peblar.identify()
 
 
+async def test_socket_unlock() -> None:
+    """Test socket_unlock posts to the socket-unlock endpoint."""
+    with aioresponses() as mocked:
+        mocked.post(
+            BASE_URL + "system/socket-unlock",
+            status=200,
+            body="",
+            content_type="text/plain",
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.socket_unlock()
+
+
 async def test_request_with_shared_session() -> None:
     """Test a passed-in shared session is reused by the client."""
     with aioresponses() as mocked:

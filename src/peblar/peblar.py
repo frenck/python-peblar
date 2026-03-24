@@ -257,6 +257,10 @@ class Peblar:
             method=hdrs.METH_DELETE,
         )
 
+    async def socket_unlock(self) -> None:
+        """Unlock the socket of the Peblar charger."""
+        await self.request(URL("system/socket-unlock"), method=hdrs.METH_POST)
+
     async def reboot(self) -> None:
         """Reboot the Peblar charger."""
         await self.request(
@@ -390,22 +394,16 @@ class PeblarApi:
         *,
         charge_current_limit: int | None = None,
         force_single_phase: bool | None = None,
-        lock_state: bool | None = None,
     ) -> PeblarEVInterface:
         """Get information about the EV interface."""
         url = URL("evinterface")
-        if (
-            charge_current_limit is not None
-            or force_single_phase is not None
-            or lock_state is not None
-        ):
+        if charge_current_limit is not None or force_single_phase is not None:
             await self.request(
                 url,
                 method=hdrs.METH_PATCH,
                 data=PeblarEVInterfaceChange(
                     charge_current_limit=charge_current_limit,
                     force_single_phase=force_single_phase,
-                    lock_state=lock_state,
                 ),
             )
 
