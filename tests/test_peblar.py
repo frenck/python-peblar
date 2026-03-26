@@ -23,6 +23,7 @@ from peblar.exceptions import (
 from peblar.models import (
     PeblarSetUserConfiguration,
     PeblarSmartCharging,
+    PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
 )
@@ -464,6 +465,22 @@ async def test_modbus_api_enable_already_matches() -> None:
 # ---------------------------------------------------------------------------
 # Model deserialization edge cases
 # ---------------------------------------------------------------------------
+
+
+def test_system_information_whitelabel_missing_pubkey() -> None:
+    """Test white-label chargers that omit CustomerUpdatePackagePubKey.
+
+    Some white-label Peblar devices (e.g. ChargePoint-branded variants) do
+    not include the CustomerUpdatePackagePubKey field. The model must parse
+    successfully with the field set to None.
+    """
+    info = PeblarSystemInformation.from_json(
+        load_fixture("system_information_whitelabel.json"),
+    )
+    assert info.customer_update_package_public_key is None
+    assert info.hostname == "PBLR-0000001"
+
+
 def test_versions_missing_fields() -> None:
     """Test PeblarVersions handles missing Customization and Firmware."""
     versions = PeblarVersions.from_json("{}")

@@ -174,8 +174,8 @@ class PeblarSystemInformation(BaseModel):
         metadata=field_options(alias="CanChargeThreePhases")
     )
     customer_id: str = field(metadata=field_options(alias="CustomerId"))
-    customer_update_package_public_key: str = field(
-        metadata=field_options(alias="CustomerUpdatePackagePubKey")
+    customer_update_package_public_key: str | None = field(
+        default=None, metadata=field_options(alias="CustomerUpdatePackagePubKey")
     )
     ethernet_mac_address: str = field(metadata=field_options(alias="EthMacAddr"))
     firmware_version: str = field(metadata=field_options(alias="FwIdent"))
