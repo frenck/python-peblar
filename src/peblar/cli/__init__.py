@@ -534,17 +534,21 @@ async def user_configuration(  # pylint: disable=too-many-statements
         ),
     ],
     charge_current_limit: Annotated[
-        int,
+        int | None,
         typer.Option(
-            help="Set the User defined charge limit current",
+            help="Set user-defined charge limit (A), minimum 6",
             show_default=False,
         ),
-    ] = 0,
+    ] = None,
 ) -> None:
     """Show or change the user configuration."""
+    if charge_current_limit is not None and charge_current_limit < 6:
+        msg = "User-defined charge limit current must be at least 6A."
+        raise typer.BadParameter(msg)
+
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
-        if charge_current_limit:
+        if charge_current_limit is not None:
             await peblar.set_user_configuration(
                 PeblarSetUserConfiguration(
                     user_defined_charge_limit_current=charge_current_limit
