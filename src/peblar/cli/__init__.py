@@ -827,7 +827,7 @@ async def ev(
                 with console.status("[cyan]Adjusting...", spinner="toggle12"):
                     await api.ev_interface(
                         charge_current_limit=charge_limit * 1000
-                        if charge_limit
+                        if charge_limit is not None
                         else None,
                         force_single_phase=force_single_phase,
                     )
