@@ -105,7 +105,7 @@ class ChargeLimiter(StrEnum):
     """Charging limited by the maximum installation current configured."""
 
     INTERNAL_POWER_LIMIT = "Internal power limit"
-    """Charging limited by the internal power limit of the charger."""
+    """Charging limited by the internal power limit of the vehicle."""
 
     LOCAL_MODBUS_API = "Local Modbus API"
     """Charging limited by the maximum current by local Modbus API."""
