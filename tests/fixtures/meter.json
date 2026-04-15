@@ -1,0 +1,14 @@
+{
+  "CurrentPhase1": 6000,
+  "CurrentPhase2": 6000,
+  "CurrentPhase3": 6000,
+  "EnergySession": 1500,
+  "EnergyTotal": 123456,
+  "PowerPhase1": 1380,
+  "PowerPhase2": 1380,
+  "PowerPhase3": 1380,
+  "PowerTotal": 4140,
+  "VoltagePhase1": 230,
+  "VoltagePhase2": 230,
+  "VoltagePhase3": 230
+}

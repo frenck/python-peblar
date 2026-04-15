@@ -1,0 +1,7 @@
+{
+  "ChargeCurrentLimit": 16000,
+  "ChargeCurrentLimitActual": 16000,
+  "ChargeCurrentLimitSource": "Current limiter",
+  "CpState": "State C",
+  "Force1Phase": false
+}
