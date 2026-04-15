@@ -116,7 +116,7 @@ async def versions(
         ),
     ],
 ) -> None:
-    """Get the software version information the Peblar charger."""
+    """Get the software version information of the Peblar charger."""
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         current = await peblar.current_versions()
@@ -300,7 +300,7 @@ async def rest_api(
     write: Annotated[
         bool,
         typer.Option(
-            help="Set access mode to read-only",
+            help="Set access mode to read-write",
         ),
     ] = False,
     generate_new_token: Annotated[
@@ -392,7 +392,7 @@ async def modbus(
     write: Annotated[
         bool,
         typer.Option(
-            help="Set access mode to read-only",
+            help="Set access mode to read-write",
         ),
     ] = False,
 ) -> None:
@@ -1086,8 +1086,8 @@ async def scan() -> None:
         table.add_row(
             f"{str(info.server).rstrip('.')}\n"
             + ", ".join(info.parsed_scoped_addresses()),
-            info.properties[b"sn"].decode(),  # type: ignore[union-attr]
-            info.properties[b"version"].decode(),  # type: ignore[union-attr]
+            info.properties[b"sn"].decode(),  # ty: ignore[unresolved-attribute]
+            info.properties[b"version"].decode(),  # ty: ignore[unresolved-attribute]
         )
 
     console.print("[green]Scanning for Peblar chargers...")

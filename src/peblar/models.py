@@ -63,7 +63,7 @@ class PeblarApiToken(BaseModel):
 
 @dataclass(kw_only=True)
 class PeblarReboot(BaseModel):
-    """Object holding the Pedblar reboot playload."""
+    """Object holding the Peblar reboot payload."""
 
     reboot_type: str = field(
         default="HardReboot", metadata=field_options(alias="RebootType")

@@ -18,7 +18,7 @@ class PeblarResponseError(PeblarError):
 
 
 class PeblarAuthenticationError(PeblarResponseError):
-    """Peblar connection exception."""
+    """Peblar authentication exception."""
 
 
 class PeblarUnsupportedFirmwareVersionError(PeblarError):

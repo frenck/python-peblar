@@ -7,7 +7,7 @@ from peblar import Peblar
 
 
 async def main() -> None:
-    """Show example of programmatically control a Peblar charger."""
+    """Show an example of programmatically controlling a Peblar charger."""
     async with Peblar(host="192.168.1.123") as peblar:
         await peblar.login(password="Sup3rS3cr3t!")
 

@@ -1,21 +1,22 @@
 ---
-name: Typing
+name: Benchmarks
 
 # yamllint disable-line rule:truthy
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 env:
-  DEFAULT_PYTHON: "3.11"
+  DEFAULT_PYTHON: "3.13"
 
 permissions:
   contents: read
 
 jobs:
-  ty:
-    name: ty
+  benchmarks:
+    name: CodSpeed
     runs-on: ubuntu-latest
     steps:
       - name: ⤵️ Check out code from GitHub
@@ -34,7 +35,10 @@ jobs:
         run: |
           poetry config virtualenvs.create true
           poetry config virtualenvs.in-project true
-      - name: 🏗 Install dependencies
-        run: poetry install --no-interaction --all-extras
-      - name: 🚀 Run ty
-        run: poetry run ty check examples src tests
+      - name: 🏗 Install Python dependencies
+        run: poetry install --no-interaction
+      - name: 🚀 Run benchmarks
+        uses: CodSpeedHQ/action@c79cfd49571e40b42b172bd0e91eabc0c949d9a7 # v4.13.1
+        with:
+          run: poetry run pytest tests/benchmarks/ --codspeed --no-cov
+          token: ${{ secrets.CODSPEED_TOKEN }}

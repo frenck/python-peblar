@@ -1,5 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["helpers:pinGitHubActionDigests"],
   "rebaseWhen": "behind-base-branch",
   "dependencyDashboard": true,
   "labels": ["dependencies", "no-stale"],
@@ -10,16 +11,16 @@
   "commitMessagePrefix": "⬆️",
   "packageRules": [
     {
-      "matchManagers": ["pep621"],
+      "matchManagers": ["poetry"],
       "addLabels": ["python"]
     },
     {
-      "matchManagers": ["pep621"],
+      "matchManagers": ["poetry"],
       "matchDepTypes": ["dev"],
       "rangeStrategy": "pin"
     },
     {
-      "matchManagers": ["pep621"],
+      "matchManagers": ["poetry"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
