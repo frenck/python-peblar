@@ -209,8 +209,8 @@ async def identify(
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
-@cli.command("unlock")
-async def unlock(
+@cli.command("lock")
+async def lock_cmd(
     host: Annotated[
         str,
         typer.Option(
@@ -232,7 +232,58 @@ async def unlock(
     ],
     quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
-    """Unlock the socket of the Peblar charger."""
+    """Lock the socket of the Peblar charger.
+
+    Sets the persistent lock so the socket stays locked between sessions.
+    There is no immediate lock action; the charger only supports immediate
+    unlock (see the unlock command).
+    """
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Locking...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.socket_lock(locked=True)
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
+@cli.command("unlock")
+async def unlock_cmd(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    persist: Annotated[
+        bool,
+        typer.Option(
+            help="Also clear the persistent lock setting",
+        ),
+    ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Unlock the socket of the Peblar charger.
+
+    Triggers an immediate unlock. Pass --persist to also clear the persistent
+    lock setting so the socket does not re-lock between sessions.
+    """
     status_ctx = (
         contextlib.nullcontext()
         if quiet
@@ -242,59 +293,8 @@ async def unlock(
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.socket_unlock()
-    print_cli_success(quiet=quiet, message="✅[green]Success!")
-
-
-@cli.command("lock")
-async def socket_lock(
-    host: Annotated[
-        str,
-        typer.Option(
-            help="Peblar charger IP address or hostname",
-            prompt="Host address",
-            show_default=False,
-            envvar="PEBLAR_HOST",
-        ),
-    ],
-    password: Annotated[
-        str,
-        typer.Option(
-            help="Peblar charger login password",
-            prompt="Password",
-            show_default=False,
-            hide_input=True,
-            envvar="PEBLAR_PASSWORD",
-        ),
-    ],
-    lock: Annotated[
-        bool,
-        typer.Option(
-            help="Lock the socket",
-        ),
-    ] = False,
-    unlock_socket: Annotated[
-        bool,
-        typer.Option(
-            "--unlock",
-            help="Unlock the socket",
-        ),
-    ] = False,
-    quiet: Annotated[bool, QUIET_OPTION] = False,
-) -> None:
-    """Lock or unlock the socket of the Peblar charger."""
-    if lock == unlock_socket:
-        msg = "Exactly one of --lock or --unlock must be used."
-        raise typer.BadParameter(msg)
-
-    status_ctx = (
-        contextlib.nullcontext()
-        if quiet
-        else console.status("[cyan]Adjusting...", spinner="toggle12")
-    )
-    with status_ctx:
-        async with Peblar(host=host) as peblar:
-            await peblar.login(password=password)
-            await peblar.socket_lock(locked=lock)
+            if persist:
+                await peblar.socket_lock(locked=False)
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 

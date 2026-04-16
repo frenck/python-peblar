@@ -83,10 +83,8 @@
     ]),
     'lock': list([
       'host',
-      'lock',
       'password',
       'quiet',
-      'unlock_socket',
     ]),
     'meter': list([
       'host',
@@ -133,6 +131,7 @@
     'unlock': list([
       'host',
       'password',
+      'persist',
       'quiet',
     ]),
     'update': list([
