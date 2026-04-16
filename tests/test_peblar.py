@@ -548,6 +548,20 @@ def test_system_information_whitelabel_missing_pubkey() -> None:
     assert info.hostname == "PBLR-0000001"
 
 
+def test_system_information_missing_fixed_cable_rating() -> None:
+    """Test socket chargers that omit HwFixedCableRating.
+
+    Socket-variant Peblar chargers (e.g. Peblar Business) do not include
+    the HwFixedCableRating field starting from firmware 1.8. The model
+    must parse successfully with the field set to None.
+    """
+    body = patched_fixture("system_information.json")
+    data = orjson.loads(body)
+    del data["HwFixedCableRating"]
+    info = PeblarSystemInformation.from_json(orjson.dumps(data))
+    assert info.hardware_fixed_cable_rating is None
+
+
 def test_versions_missing_fields() -> None:
     """Test PeblarVersions handles missing Customization and Firmware."""
     versions = PeblarVersions.from_json("{}")

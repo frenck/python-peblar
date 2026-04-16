@@ -702,7 +702,9 @@ async def system_information(
     table.add_row("Firmware version", info.firmware_version)
     table.add_row(
         "Hardware fixed cable rating",
-        f"{info.hardware_fixed_cable_rating}A",
+        f"{info.hardware_fixed_cable_rating}A"
+        if info.hardware_fixed_cable_rating is not None
+        else "N/A (socket charger)",
     )
     table.add_row("Hardware has BOP", convert_to_string(info.hardware_has_bop))
     table.add_row("Hardware has buzzer", convert_to_string(info.hardware_has_buzzer))
