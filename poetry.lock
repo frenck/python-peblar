@@ -2867,4 +2867,4 @@ cli = ["rich", "typer", "zeroconf"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "cd958241896bae2e1df079b889fe054d047f018d7cacfcb910a84216361e34f2"
+content-hash = "812173b23315718025e2a44399bff888a99f236b33ab2141c9d9ef303fa7891b"
