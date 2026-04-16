@@ -12,6 +12,7 @@ env:
   DEFAULT_PYTHON: "3.13"
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
@@ -42,4 +43,3 @@ jobs:
         with:
           run: poetry run pytest tests/benchmarks/ --codspeed --no-cov
           mode: walltime
-          token: ${{ secrets.CODSPEED_TOKEN }}
