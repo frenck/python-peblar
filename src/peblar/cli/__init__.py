@@ -868,6 +868,142 @@ async def smart_charging(
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
+@cli.command("rfid-tokens")
+async def rfid_tokens(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,  # noqa: ARG001  # pylint: disable=unused-argument
+) -> None:
+    """List RFID tokens in the standalone auth list."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        tokens = await peblar.rfid_tokens()
+
+    table = Table(title="Peblar RFID tokens")
+    table.add_column("UID", style="cyan bold")
+    table.add_column("Description", style="cyan bold")
+
+    for token in tokens:
+        table.add_row(token.rfid_token_uid, token.rfid_token_description)
+
+    console.print(table)
+
+
+@cli.command("add-rfid-token")
+async def add_rfid_token(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    uid: Annotated[
+        str,
+        typer.Option(
+            help="RFID token UID",
+            prompt="UID",
+            show_default=False,
+        ),
+    ],
+    description: Annotated[
+        str,
+        typer.Option(
+            help="RFID token description",
+            prompt="Description",
+            show_default=False,
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Add an RFID token to the standalone auth list."""
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adding RFID token...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.add_rfid_token(
+                rfid_token_uid=uid,
+                rfid_token_description=description,
+            )
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
+@cli.command("del-rfid-token")
+async def del_rfid_token(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    uid: Annotated[
+        str,
+        typer.Option(
+            help="RFID token UID to remove",
+            prompt="UID",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Remove an RFID token from the standalone auth list."""
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Removing RFID token...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.delete_rfid_token(uid=uid)
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
 @cli.command("ev")
 async def ev(
     host: Annotated[

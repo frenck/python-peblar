@@ -11,6 +11,13 @@
 # ---
 # name: test_cli_structure
   dict({
+    'add-rfid-token': list([
+      'description',
+      'host',
+      'password',
+      'quiet',
+      'uid',
+    ]),
     'api': list([
       'disable',
       'enable',
@@ -26,6 +33,12 @@
       'host',
       'password',
       'quiet',
+    ]),
+    'del-rfid-token': list([
+      'host',
+      'password',
+      'quiet',
+      'uid',
     ]),
     'dump': list([
       'host',
@@ -71,6 +84,11 @@
       'write',
     ]),
     'reboot': list([
+      'host',
+      'password',
+      'quiet',
+    ]),
+    'rfid-tokens': list([
       'host',
       'password',
       'quiet',
