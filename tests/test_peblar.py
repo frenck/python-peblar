@@ -12,12 +12,18 @@ from peblar.const import (
     AccessMode,
     PackageType,
     SmartChargingMode,
+    SolarChargingMode,
 )
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
     PeblarConnectionTimeoutError,
     PeblarError,
+)
+from peblar.models import (
+    PeblarSmartCharging,
+    PeblarUserConfiguration,
+    PeblarVersions,
 )
 from peblar.peblar import PeblarApi
 from tests import load_fixture
@@ -60,8 +66,6 @@ def patched_fixture(filename: str, **overrides: object) -> str:
 # ---------------------------------------------------------------------------
 # request() transport layer
 # ---------------------------------------------------------------------------
-
-
 async def test_identify() -> None:
     """Test the identify method issues a PUT to the charger."""
     with aioresponses() as mocked:
@@ -154,8 +158,6 @@ async def test_retry_then_success() -> None:
 # ---------------------------------------------------------------------------
 # High-level methods (JSON payloads parsed via mashumaro)
 # ---------------------------------------------------------------------------
-
-
 async def test_login() -> None:
     """Test login posts credentials to the login endpoint."""
     with aioresponses() as mocked:
@@ -275,8 +277,6 @@ async def test_api_token_generate_new() -> None:
 # ---------------------------------------------------------------------------
 # rest_api() / modbus_api() flow
 # ---------------------------------------------------------------------------
-
-
 async def test_rest_api_disallowed() -> None:
     """Test rest_api raises when the charger disallows the local REST API."""
     body = patched_fixture("user_configuration.json", LocalRestApiAllowed=False)
@@ -336,8 +336,6 @@ async def test_modbus_api_change_access_mode() -> None:
 # ---------------------------------------------------------------------------
 # PeblarApi (the /api/wlac/v1 Local REST API)
 # ---------------------------------------------------------------------------
-
-
 async def test_api_health() -> None:
     """Test PeblarApi.health parses a health response."""
     with aioresponses() as mocked:
@@ -393,3 +391,140 @@ async def test_api_401_authentication_error() -> None:
         async with PeblarApi(host=HOST, token="t") as api:
             with pytest.raises(PeblarAuthenticationError):
                 await api.health()
+
+
+async def test_api_timeout() -> None:
+    """Test PeblarApi request timeout is surfaced as PeblarConnectionTimeoutError."""
+    with aioresponses() as mocked:
+        for _ in range(3):
+            mocked.get(API_HEALTH_URL, exception=TimeoutError())
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarConnectionTimeoutError):
+                await api.health()
+
+
+async def test_api_connection_error() -> None:
+    """Test PeblarApi connection error retries and raises."""
+    with aioresponses() as mocked:
+        for _ in range(3):
+            mocked.get(API_HEALTH_URL, exception=ClientConnectionError("boom"))
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarConnectionError):
+                await api.health()
+
+
+# ---------------------------------------------------------------------------
+# rest_api() / modbus_api() noop branches
+# ---------------------------------------------------------------------------
+async def test_rest_api_already_enabled_noop() -> None:
+    """Test rest_api skips the PATCH when enable already matches current state."""
+    body = load_fixture("user_configuration.json")
+    with aioresponses() as mocked:
+        mocked.get(USER_CONFIG_URL, status=200, body=body)
+        # No PATCH mock: if rest_api tries to PATCH, aioresponses raises ConnectionError
+        mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
+        async with Peblar(host=HOST) as peblar:
+            api = await peblar.rest_api(enable=True)
+            await api.close()
+
+
+async def test_rest_api_access_mode_already_matches() -> None:
+    """Test rest_api skips the PATCH when access_mode matches current state."""
+    body = load_fixture("user_configuration.json")
+    with aioresponses() as mocked:
+        mocked.get(USER_CONFIG_URL, status=200, body=body)
+        mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
+        async with Peblar(host=HOST) as peblar:
+            # Fixture has ReadWrite, request ReadWrite: should be a noop
+            api = await peblar.rest_api(access_mode=AccessMode.READ_WRITE)
+            await api.close()
+
+
+async def test_modbus_api_enable_already_matches() -> None:
+    """Test modbus_api skips the PATCH when enable matches current state."""
+    body = load_fixture("user_configuration.json")
+    with aioresponses() as mocked:
+        mocked.get(USER_CONFIG_URL, status=200, body=body)
+        async with Peblar(host=HOST) as peblar:
+            # Fixture has ModbusServerEnable=false, pass enable=False: noop
+            await peblar.modbus_api(enable=False)
+
+
+# ---------------------------------------------------------------------------
+# Model deserialization edge cases
+# ---------------------------------------------------------------------------
+def test_versions_missing_fields() -> None:
+    """Test PeblarVersions handles missing Customization and Firmware."""
+    versions = PeblarVersions.from_json("{}")
+    assert versions.customization is None
+    assert versions.firmware is None
+    assert versions.customization_version is None
+    assert versions.firmware_version is None
+
+
+def test_user_configuration_fast_solar() -> None:
+    """Test user_configuration infers FAST_SOLAR (solar + MaxSolar mode)."""
+    body = patched_fixture(
+        "user_configuration.json",
+        SolarChargingEnable=True,
+        SolarChargingMode="MaxSolar",
+    )
+    config = PeblarUserConfiguration.from_json(body)
+    assert config.smart_charging == SmartChargingMode.FAST_SOLAR
+
+
+def test_user_configuration_smart_solar() -> None:
+    """Test user_configuration infers SMART_SOLAR (solar + OptimizedSolar)."""
+    body = patched_fixture(
+        "user_configuration.json",
+        SolarChargingEnable=True,
+        SolarChargingMode="OptimizedSolar",
+    )
+    config = PeblarUserConfiguration.from_json(body)
+    assert config.smart_charging == SmartChargingMode.SMART_SOLAR
+
+
+def test_user_configuration_pure_solar() -> None:
+    """Test user_configuration infers PURE_SOLAR (solar + PureSolar mode)."""
+    body = patched_fixture(
+        "user_configuration.json",
+        SolarChargingEnable=True,
+        SolarChargingMode="PureSolar",
+    )
+    config = PeblarUserConfiguration.from_json(body)
+    assert config.smart_charging == SmartChargingMode.PURE_SOLAR
+
+
+def test_smart_charging_model_default() -> None:
+    """Test PeblarSmartCharging post_init for DEFAULT mode."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.DEFAULT)
+    assert obj.scheduled_charging_enable is False
+    assert obj.solar_charging_enable is False
+
+
+def test_smart_charging_model_scheduled() -> None:
+    """Test PeblarSmartCharging post_init for SCHEDULED mode."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.SCHEDULED)
+    assert obj.scheduled_charging_enable is True
+    assert obj.solar_charging_enable is False
+
+
+def test_smart_charging_model_fast_solar() -> None:
+    """Test PeblarSmartCharging post_init for FAST_SOLAR mode."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.FAST_SOLAR)
+    assert obj.solar_charging_enable is True
+    assert obj.solar_charging_mode == SolarChargingMode.MAX_SOLAR
+
+
+def test_smart_charging_model_smart_solar() -> None:
+    """Test PeblarSmartCharging post_init for SMART_SOLAR mode."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.SMART_SOLAR)
+    assert obj.solar_charging_enable is True
+    assert obj.solar_charging_mode == SolarChargingMode.OPTIMIZED_SOLAR
+
+
+def test_smart_charging_model_pure_solar() -> None:
+    """Test PeblarSmartCharging post_init for PURE_SOLAR mode."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.PURE_SOLAR)
+    assert obj.solar_charging_enable is True
+    assert obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR

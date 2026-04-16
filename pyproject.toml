@@ -88,7 +88,7 @@ omit = ["tests/benchmarks/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 85
+fail_under = 95
 omit = ["src/peblar/cli/*"]
 
 [tool.ty.environment]
