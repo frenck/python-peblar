@@ -1,0 +1,286 @@
+# serializer version: 1
+# name: test_authentication_error_handler
+  '''
+  ╭──────────────── Authentication error ────────────────╮
+  │                                                      │
+  │     The provided Peblar charger password is invalid. │
+  │                                                      │
+  ╰──────────────────────────────────────────────────────╯
+  
+  '''
+# ---
+# name: test_cli_structure
+  dict({
+    'api': list([
+      'disable',
+      'enable',
+      'generate_new_token',
+      'host',
+      'password',
+      'read',
+      'write',
+    ]),
+    'config': list([
+      'host',
+      'password',
+    ]),
+    'dump': list([
+      'host',
+      'output',
+      'password',
+      'raw',
+    ]),
+    'ev': list([
+      'charge_limit',
+      'force_single_phase',
+      'host',
+      'password',
+    ]),
+    'health': list([
+      'host',
+      'password',
+    ]),
+    'identify': list([
+      'host',
+      'password',
+    ]),
+    'info': list([
+      'host',
+      'password',
+    ]),
+    'meter': list([
+      'host',
+      'password',
+    ]),
+    'modbus': list([
+      'disable',
+      'enable',
+      'host',
+      'password',
+      'read',
+      'write',
+    ]),
+    'reboot': list([
+      'host',
+      'password',
+    ]),
+    'scan': list([
+    ]),
+    'smart-charging': list([
+      'default',
+      'fast_solar',
+      'host',
+      'password',
+      'pure_solar',
+      'scheduled',
+      'smart_solar',
+    ]),
+    'system': list([
+      'host',
+      'password',
+    ]),
+    'update': list([
+      'customization',
+      'firmware',
+      'host',
+      'password',
+    ]),
+    'versions': list([
+      'host',
+      'password',
+    ]),
+  })
+# ---
+# name: test_config
+  '''
+                             Peblar user configuration                            
+  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Property                                      ┃ Value                        ┃
+  ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ BOP fallback current                          │ 6000                         │
+  │ BOP HomeWizard address                        │                              │
+  │ BOP source parameters                         │ {'address': 'redacted-host'} │
+  │ BOP source                                    │ homewizard                   │
+  │ Buzzer volume                                 │ 4                            │
+  │ Connected phases                              │ 3                            │
+  │ Current control BOP CT type                   │ CTK05-14                     │
+  │ Current control BOP enabled                   │ ✅                           │
+  │ Current control BOP fuse rating               │ 25A                          │
+  │ Current control fixed charge current limit    │ 16                           │
+  │ Ground monitoring                             │ ✅                           │
+  │ Group load balancing enabled                  │ ❌                           │
+  │ Group load balancing fallback current         │ 6A                           │
+  │ Group load balancing group ID                 │ 1                            │
+  │ Group load balancing interface                │ RS485                        │
+  │ Group load balancing max current              │ 0A                           │
+  │ Group load balancing role                     │ Follower                     │
+  │ LED intensity manual                          │ 22                           │
+  │ LED intensity max                             │ 100                          │
+  │ LED intensity min                             │ 1                            │
+  │ LED intensity mode                            │ Fixed                        │
+  │ Local REST API access mode                    │ ReadWrite                    │
+  │ Local REST API allowed                        │ ✅                           │
+  │ Local REST API enabled                        │ ✅                           │
+  │ Local smart charging allowed                  │ ✅                           │
+  │ Modbus server access mode                     │ ReadOnly                     │
+  │ Modbus server allowed                         │ ✅                           │
+  │ Modbus server enabled                         │ ❌                           │
+  │ Phase rotation                                │ RST                          │
+  │ Power limit input DI1 inverse                 │ ❌                           │
+  │ Power limit input DI1 limit                   │ 0A                           │
+  │ Power limit input DI2 inverse                 │ ❌                           │
+  │ Power limit input DI2 limit                   │ 6A                           │
+  │ Power limit input enabled                     │ ❌                           │
+  │ Predefined CPO name                           │                              │
+  │ Scheduled charging allowed                    │ ✅                           │
+  │ Scheduled charging enabled                    │ ❌                           │
+  │ SECC OCPP active                              │ ❌                           │
+  │ SECC OCPP URI                                 │                              │
+  │ Session manager charge without authentication │ ✅                           │
+  │ Solar charging allowed                        │ ✅                           │
+  │ Solar charging enabled                        │ ❌                           │
+  │ Solar charging mode                           │ MaxSolar                     │
+  │ Solar charging source parameters              │ address: redacted-host       │
+  │ Solar charging source                         │ homewizard                   │
+  │ Time zone                                     │ Europe/Amsterdam             │
+  │ User defined charge limit current allowed     │ ✅                           │
+  │ User defined charge limit current             │ 16A                          │
+  │ User defined household power limit allowed    │ ✅                           │
+  │ User defined household power limit enabled    │ ❌                           │
+  │ User defined household power limit source     │ notselected                  │
+  │ User defined household power limit            │ 17.5 kW                      │
+  │ User keep socket locked                       │ ❌                           │
+  │ VDE phase imbalance enabled                   │ ❌                           │
+  │ VDE phase imbalance limit                     │ 12A                          │
+  │ Web IF update helper                          │ ✅                           │
+  ├───────────────────────────────────────────────┼──────────────────────────────┤
+  │ Smart charging mode                           │ Default                      │
+  └───────────────────────────────────────────────┴──────────────────────────────┘
+  
+  '''
+# ---
+# name: test_health
+  '''
+         Peblar API Health       
+  ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+  ┃ Property        ┃ Value     ┃
+  ┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+  │ API Access mode │ ReadWrite │
+  │ API version     │ 1.0       │
+  └─────────────────┴───────────┘
+  
+  '''
+# ---
+# name: test_info
+  '''
+                    Peblar charger information                  
+  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Property                             ┃ Value               ┃
+  ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
+  │ Customer ID                          │ PBLR-0000001        │
+  │ Ethernet MAC address                 │ AA:BB:CC:DD:EE:01   │
+  │ Firmware version                     │ 1.9.0+1+WL-1        │
+  │ Hardware fixed cable rating          │ 20A                 │
+  │ Hardware has BOP                     │ ✅                  │
+  │ Hardware has buzzer                  │ ✅                  │
+  │ Hardware has Eichrecht laser marking │ ❌                  │
+  │ Hardware has Ethernet                │ ✅                  │
+  │ Hardware has LED                     │ ✅                  │
+  │ Hardware has LTE                     │ ❌                  │
+  │ Hardware has meter display           │ ✅                  │
+  │ Hardware has meter                   │ ✅                  │
+  │ Hardware has PLC                     │ ❌                  │
+  │ Hardware has RFID                    │ ✅                  │
+  │ Hardware has RS485                   │ ✅                  │
+  │ Hardware has socket                  │ ❌                  │
+  │ Hardware has TPM                     │ ❌                  │
+  │ Hardware has WLAN                    │ ✅                  │
+  │ Hardware max current                 │ 16A                 │
+  │ Hardware one or three phase          │ 3                   │
+  │ Hostname                             │ PBLR-0000001        │
+  │ Mainboard part number                │ 0000-0000-0000      │
+  │ Mainboard serial number              │ 00-00-AAA-000       │
+  │ Meter firmware version               │ 3d8966              │
+  │ Product model name                   │ WLAC1-H11R0WE0ICR00 │
+  │ Product number                       │ 0000-0000-0000      │
+  │ Product serial number                │ 00-00-AAA-000       │
+  │ Product vendor name                  │ Peblar              │
+  │ WLAN AP MAC address                  │ AA:BB:CC:DD:EE:02   │
+  │ WLAN MAC address                     │ AA:BB:CC:DD:EE:03   │
+  └──────────────────────────────────────┴─────────────────────┘
+  
+  '''
+# ---
+# name: test_meter
+  '''
+         Peblar meter status       
+  ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
+  ┃ Property        ┃ Value       ┃
+  ┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━┩
+  │ Energy session  │ 34.918kWh   │
+  │ Energy total    │ 4937.323kWh │
+  ├─────────────────┼─────────────┤
+  │ Total power     │ 0W          │
+  │ Power phase 1   │ 0W          │
+  │ Power phase 2   │ 0W          │
+  │ Power phase 3   │ 0W          │
+  ├─────────────────┼─────────────┤
+  │ Total current   │ 0.0A        │
+  │ Current Phase 1 │ 0.0A        │
+  │ Current Phase 2 │ 0.0A        │
+  │ Current Phase 3 │ 0.0A        │
+  ├─────────────────┼─────────────┤
+  │ Voltage Phase 1 │ 227V        │
+  │ Voltage Phase 2 │ 225V        │
+  │ Voltage Phase 3 │ 228V        │
+  └─────────────────┴─────────────┘
+  
+  '''
+# ---
+# name: test_system
+  '''
+                 Peblar charger system status               
+  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Property                      ┃ Value                  ┃
+  ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ Active error codes            │ No errors              │
+  │ Active warning codes          │ No warnings            │
+  ├───────────────────────────────┼────────────────────────┤
+  │ Phase count                   │ 3                      │
+  │ Force of single phase allowed │ ✅                     │
+  ├───────────────────────────────┼────────────────────────┤
+  │ Firmware version              │ 1.9.0+1+WL-1           │
+  │ Product serial number         │ 00-00-AAA-000          │
+  │ Product part number           │ 0000-0000-0000         │
+  ├───────────────────────────────┼────────────────────────┤
+  │ Uptime                        │ 3514985 seconds        │
+  │ WLAN signal strength          │ WLAN not connected     │
+  │ Cellular signal strength      │ Cellular not connected │
+  └───────────────────────────────┴────────────────────────┘
+  
+  '''
+# ---
+# name: test_unsupported_firmware_error_handler
+  '''
+  ╭──────────────────────── Unsupported firmware version ────────────────────────╮
+  │                                                                              │
+  │     The specified Peblar charger is running an unsupported firmware version. │
+  │                                                                              │
+  │     The tooling currently only supports firmware versions XXX and higher.    │
+  │                                                                              │
+  ╰──────────────────────────────────────────────────────────────────────────────╯
+  
+  '''
+# ---
+# name: test_versions
+  '''
+                   Peblar charger versions                 
+  ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+  ┃ Type          ┃ Installed version ┃ Available version ┃
+  ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+  │ Firmware      │ 1.9.0+1+WL-1      │ ✅ 1.9.0+1+WL-1   │
+  │ Customization │ Peblar-1.14       │ ✅ Peblar-1.14    │
+  └───────────────┴───────────────────┴───────────────────┘
+  
+  '''
+# ---
