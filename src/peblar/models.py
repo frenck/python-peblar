@@ -16,6 +16,7 @@ from .const import (
     AccessMode,
     ChargeLimiter,
     CPState,
+    LedBrightness,
     LedIntensityMode,
     PackageType,
     SmartChargingMode,
@@ -98,6 +99,34 @@ class PeblarModbusApiAccess(BaseModel):
     )
     enabled: bool | None = field(
         default=None, metadata=field_options(alias="ModbusServerEnable")
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarSocketLock(BaseModel):
+    """Object holding the socket lock configuration of a Peblar charger."""
+
+    user_keep_socket_locked: bool = field(
+        metadata=field_options(alias="UserKeepSocketLocked")
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarBuzzerVolume(BaseModel):
+    """Object holding the buzzer volume configuration of a Peblar charger."""
+
+    buzzer_volume: SoundVolume = field(metadata=field_options(alias="HmiBuzzerVolume"))
+
+
+@dataclass(kw_only=True)
+class PeblarLedIntensity(BaseModel):
+    """Object holding the LED intensity configuration of a Peblar charger."""
+
+    led_intensity_mode: LedIntensityMode | None = field(
+        default=None, metadata=field_options(alias="HmiLedIntensityMode")
+    )
+    led_intensity_manual: int | None = field(
+        default=None, metadata=field_options(alias="HmiLedIntensityManual")
     )
 
 
@@ -409,6 +438,7 @@ class PeblarUserConfiguration(BaseModel):
 
     # Replicated field from the Peblar UI
     smart_charging: SmartChargingMode | None = None
+    led_brightness: LedBrightness | None = None
 
     @classmethod
     def __pre_deserialize__(cls, d: dict[Any, Any]) -> dict[Any, Any]:
@@ -435,6 +465,14 @@ class PeblarUserConfiguration(BaseModel):
                 obj.smart_charging = SmartChargingMode.SMART_SOLAR
             elif obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR:
                 obj.smart_charging = SmartChargingMode.PURE_SOLAR
+
+        if obj.led_intensity_mode == LedIntensityMode.AUTO:
+            obj.led_brightness = LedBrightness.AUTOMATIC
+        else:
+            try:
+                obj.led_brightness = LedBrightness(obj.led_intensity_manual)
+            except ValueError:
+                obj.led_brightness = None
 
         return obj
 

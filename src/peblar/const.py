@@ -45,6 +45,25 @@ class SoundVolume(IntEnum):
     """High sound volume."""
 
 
+class LedBrightness(IntEnum):
+    """Peblar LED brightness level."""
+
+    AUTOMATIC = -1
+    """Automatic LED brightness (follows ambient light)."""
+
+    OFF = 0
+    """LED off."""
+
+    DIM = 2
+    """Dim LED brightness."""
+
+    MEDIUM = 22
+    """Medium LED brightness."""
+
+    BRIGHT = 100
+    """Full LED brightness."""
+
+
 class LedIntensityMode(StrEnum):
     """Peblar LED intensity mode."""
 

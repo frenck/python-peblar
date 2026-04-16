@@ -10,9 +10,11 @@ from aioresponses import aioresponses
 from peblar import Peblar
 from peblar.const import (
     AccessMode,
+    LedBrightness,
     PackageType,
     SmartChargingMode,
     SolarChargingMode,
+    SoundVolume,
 )
 from peblar.exceptions import (
     PeblarAuthenticationError,
@@ -205,6 +207,38 @@ async def test_smart_charging_default() -> None:
             await peblar.smart_charging(SmartChargingMode.DEFAULT)
 
 
+async def test_socket_lock() -> None:
+    """Test socket_lock PATCHes the user config endpoint."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.socket_lock(locked=True)
+
+
+async def test_set_buzzer_volume() -> None:
+    """Test set_buzzer_volume PATCHes the user config endpoint."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.set_buzzer_volume(volume=SoundVolume.MEDIUM)
+
+
+async def test_set_led_brightness_auto() -> None:
+    """Test set_led_brightness sends auto mode when AUTOMATIC is requested."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.set_led_brightness(brightness=LedBrightness.AUTOMATIC)
+
+
+async def test_set_led_brightness_fixed() -> None:
+    """Test set_led_brightness sends fixed mode with manual value."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.set_led_brightness(brightness=LedBrightness.MEDIUM)
+
+
 async def test_update_user_configuration() -> None:
     """Test update_user_configuration PATCHes the user config endpoint."""
     with aioresponses() as mocked:
@@ -238,6 +272,7 @@ async def test_user_configuration_default_mode() -> None:
             config = await peblar.user_configuration()
     assert config.time_zone == "Europe/Amsterdam"
     assert config.smart_charging == SmartChargingMode.DEFAULT
+    assert config.led_brightness == LedBrightness.MEDIUM
 
 
 async def test_user_configuration_scheduled_mode() -> None:
@@ -553,6 +588,16 @@ def test_user_configuration_pure_solar() -> None:
     )
     config = PeblarUserConfiguration.from_json(body)
     assert config.smart_charging == SmartChargingMode.PURE_SOLAR
+
+
+def test_user_configuration_led_brightness_auto() -> None:
+    """Test user_configuration infers AUTOMATIC led_brightness when mode is Auto."""
+    body = patched_fixture(
+        "user_configuration.json",
+        HmiLedIntensityMode="Auto",
+    )
+    config = PeblarUserConfiguration.from_json(body)
+    assert config.led_brightness == LedBrightness.AUTOMATIC
 
 
 def test_smart_charging_model_default() -> None:

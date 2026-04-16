@@ -28,6 +28,12 @@
       'read',
       'write',
     ]),
+    'buzzer': list([
+      'host',
+      'password',
+      'quiet',
+      'volume',
+    ]),
     'config': list([
       'charge_current_limit',
       'host',
@@ -65,6 +71,17 @@
       'quiet',
     ]),
     'info': list([
+      'host',
+      'password',
+      'quiet',
+    ]),
+    'led': list([
+      'brightness',
+      'host',
+      'password',
+      'quiet',
+    ]),
+    'lock': list([
       'host',
       'password',
       'quiet',
@@ -114,6 +131,7 @@
     'unlock': list([
       'host',
       'password',
+      'persist',
       'quiet',
     ]),
     'update': list([

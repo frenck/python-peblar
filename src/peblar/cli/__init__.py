@@ -16,7 +16,14 @@ from yarl import URL
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from peblar.const import AccessMode, CPState, PackageType, SmartChargingMode
+from peblar.const import (
+    AccessMode,
+    CPState,
+    LedBrightness,
+    PackageType,
+    SmartChargingMode,
+    SoundVolume,
+)
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -202,8 +209,8 @@ async def identify(
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
-@cli.command("unlock")
-async def unlock(
+@cli.command("lock")
+async def lock_cmd(
     host: Annotated[
         str,
         typer.Option(
@@ -225,7 +232,58 @@ async def unlock(
     ],
     quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
-    """Unlock the socket of the Peblar charger."""
+    """Lock the socket of the Peblar charger.
+
+    Sets the persistent lock so the socket stays locked between sessions.
+    There is no immediate lock action; the charger only supports immediate
+    unlock (see the unlock command).
+    """
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Locking...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.socket_lock(locked=True)
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
+@cli.command("unlock")
+async def unlock_cmd(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    persist: Annotated[
+        bool,
+        typer.Option(
+            help="Also clear the persistent lock setting",
+        ),
+    ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Unlock the socket of the Peblar charger.
+
+    Triggers an immediate unlock. Pass --persist to also clear the persistent
+    lock setting so the socket does not re-lock between sessions.
+    """
     status_ctx = (
         contextlib.nullcontext()
         if quiet
@@ -235,6 +293,92 @@ async def unlock(
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.socket_unlock()
+            if persist:
+                await peblar.socket_lock(locked=False)
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
+@cli.command("buzzer")
+async def buzzer(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    volume: Annotated[
+        SoundVolume,
+        typer.Option(
+            help="Buzzer volume level",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Set the buzzer volume of the Peblar charger."""
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adjusting...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.set_buzzer_volume(volume=volume)
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
+
+
+@cli.command("led")
+async def led(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    brightness: Annotated[
+        LedBrightness,
+        typer.Option(
+            help="LED brightness level",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Set the LED brightness of the Peblar charger."""
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adjusting...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            await peblar.set_led_brightness(brightness=brightness)
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 

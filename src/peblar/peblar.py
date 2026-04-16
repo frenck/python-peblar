@@ -18,6 +18,7 @@ from tenacity import (
 )
 from yarl import URL
 
+from .const import LedBrightness, LedIntensityMode, SoundVolume
 from .exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
@@ -27,9 +28,11 @@ from .exceptions import (
 from .models import (
     BaseModel,
     PeblarApiToken,
+    PeblarBuzzerVolume,
     PeblarEVInterface,
     PeblarEVInterfaceChange,
     PeblarHealth,
+    PeblarLedIntensity,
     PeblarLocalRestApiAccess,
     PeblarLogin,
     PeblarMeter,
@@ -38,6 +41,7 @@ from .models import (
     PeblarRfidToken,
     PeblarSetUserConfiguration,
     PeblarSmartCharging,
+    PeblarSocketLock,
     PeblarSystem,
     PeblarSystemInformation,
     PeblarUpdate,
@@ -222,6 +226,37 @@ class Peblar:
             URL("config/user"),
             method=hdrs.METH_PATCH,
             data=PeblarSmartCharging(smart_charging=smart_charging_mode),
+        )
+
+    async def socket_lock(self, *, locked: bool) -> None:
+        """Lock or unlock the socket of the Peblar charger."""
+        await self.request(
+            URL("config/user"),
+            method=hdrs.METH_PATCH,
+            data=PeblarSocketLock(user_keep_socket_locked=locked),
+        )
+
+    async def set_buzzer_volume(self, *, volume: SoundVolume) -> None:
+        """Set the buzzer volume of the Peblar charger."""
+        await self.request(
+            URL("config/user"),
+            method=hdrs.METH_PATCH,
+            data=PeblarBuzzerVolume(buzzer_volume=volume),
+        )
+
+    async def set_led_brightness(self, *, brightness: LedBrightness) -> None:
+        """Set the LED brightness of the Peblar charger."""
+        if brightness == LedBrightness.AUTOMATIC:
+            data = PeblarLedIntensity(led_intensity_mode=LedIntensityMode.AUTO)
+        else:
+            data = PeblarLedIntensity(
+                led_intensity_mode=LedIntensityMode.FIXED,
+                led_intensity_manual=brightness.value,
+            )
+        await self.request(
+            URL("config/user"),
+            method=hdrs.METH_PATCH,
+            data=data,
         )
 
     async def identify(self) -> None:
