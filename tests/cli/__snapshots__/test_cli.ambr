@@ -17,6 +17,7 @@
       'generate_new_token',
       'host',
       'password',
+      'quiet',
       'read',
       'write',
     ]),
@@ -24,11 +25,13 @@
       'charge_current_limit',
       'host',
       'password',
+      'quiet',
     ]),
     'dump': list([
       'host',
       'output',
       'password',
+      'quiet',
       'raw',
     ]),
     'ev': list([
@@ -36,36 +39,44 @@
       'force_single_phase',
       'host',
       'password',
+      'quiet',
     ]),
     'health': list([
       'host',
       'password',
+      'quiet',
     ]),
     'identify': list([
       'host',
       'password',
+      'quiet',
     ]),
     'info': list([
       'host',
       'password',
+      'quiet',
     ]),
     'meter': list([
       'host',
       'password',
+      'quiet',
     ]),
     'modbus': list([
       'disable',
       'enable',
       'host',
       'password',
+      'quiet',
       'read',
       'write',
     ]),
     'reboot': list([
       'host',
       'password',
+      'quiet',
     ]),
     'scan': list([
+      'quiet',
     ]),
     'smart-charging': list([
       'default',
@@ -73,22 +84,26 @@
       'host',
       'password',
       'pure_solar',
+      'quiet',
       'scheduled',
       'smart_solar',
     ]),
     'system': list([
       'host',
       'password',
+      'quiet',
     ]),
     'update': list([
       'customization',
       'firmware',
       'host',
       'password',
+      'quiet',
     ]),
     'versions': list([
       'host',
       'password',
+      'quiet',
     ]),
   })
 # ---
@@ -274,6 +289,18 @@
   '''
 # ---
 # name: test_versions
+  '''
+                   Peblar charger versions                 
+  ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+  ┃ Type          ┃ Installed version ┃ Available version ┃
+  ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+  │ Firmware      │ 1.9.0+1+WL-1      │ ✅ 1.9.0+1+WL-1   │
+  │ Customization │ Peblar-1.14       │ ✅ Peblar-1.14    │
+  └───────────────┴───────────────────┴───────────────────┘
+  
+  '''
+# ---
+# name: test_versions_quiet_still_prints_table
   '''
                    Peblar charger versions                 
   ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
