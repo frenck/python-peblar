@@ -38,7 +38,7 @@ dependencies = [
   'aiohttp (>=3.0.0)',
   'awesomeversion (>=22.8.0)',
   'mashumaro (>=3.10)',
-  'tenacity (>=9.0.0)',
+  'tenacity (>=8.0.0)',
   'orjson (>=3.9.8)',
   'yarl (>=1.6.0)',
 ]
