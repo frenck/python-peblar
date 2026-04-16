@@ -77,7 +77,7 @@ class Peblar:
     session: ClientSession | None = None
 
     _close_session: bool = False
-    _password: str | None = None
+    _password: str | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize the Peblar object."""
@@ -134,11 +134,11 @@ class Peblar:
     async def login(self, *, password: str) -> None:
         """Log in to the Peblar charger.
 
-        The password is stored internally so that PeblarApi instances
-        created via rest_api() can transparently re-authenticate when
-        the API token becomes invalid (e.g. after a charger reboot).
+        The password is stored internally (only after a successful login)
+        so that PeblarApi instances created via rest_api() can
+        transparently re-authenticate when the API token becomes invalid
+        (e.g. after a charger reboot).
         """
-        self._password = password
         await self.request(
             URL("auth/login"),
             method=hdrs.METH_POST,
@@ -146,6 +146,7 @@ class Peblar:
                 password=password,
             ),
         )
+        self._password = password
 
     async def rest_api(
         self,
@@ -450,7 +451,7 @@ class PeblarApi:
                     return await self.request(
                         uri, method=method, data=data, _refreshed=True
                     )
-                msg = "Authentication error. Provided password is invalid."
+                msg = "Authentication error. API token is invalid or expired."
                 raise PeblarAuthenticationError(msg) from exception
             msg = "Error occurred while communicating to the Peblar charger API"
             raise PeblarError(msg) from exception
