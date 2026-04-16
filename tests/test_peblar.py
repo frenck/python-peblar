@@ -472,6 +472,80 @@ async def test_api_401_authentication_error() -> None:
                 await api.health()
 
 
+async def test_api_token_refresh_on_401() -> None:
+    """Test PeblarApi refreshes the token and retries on a 401.
+
+    Simulates a charger reboot that invalidates the API token. The first
+    request returns 401, the token_refresh callback provides a fresh
+    token, and the retried request succeeds.
+    """
+
+    async def fake_refresh() -> str:
+        return "refreshed-token"
+
+    with aioresponses() as mocked:
+        # First call: 401 (stale token)
+        mocked.get(API_HEALTH_URL, status=401, body="", content_type="text/plain")
+        # Second call after refresh: success
+        mocked.get(API_HEALTH_URL, status=200, body=load_fixture("health.json"))
+        async with PeblarApi(
+            host=HOST, token="stale-token", token_refresh=fake_refresh
+        ) as api:
+            health = await api.health()
+    assert health.access_mode == AccessMode.READ_WRITE
+    assert api.token == "refreshed-token"
+
+
+async def test_api_token_refresh_still_fails() -> None:
+    """Test PeblarApi raises after refresh if the retried request also 401s."""
+
+    async def fake_refresh() -> str:
+        return "also-bad-token"
+
+    with aioresponses() as mocked:
+        # First call: 401
+        mocked.get(API_HEALTH_URL, status=401, body="", content_type="text/plain")
+        # Retry after refresh: still 401
+        mocked.get(API_HEALTH_URL, status=401, body="", content_type="text/plain")
+        async with PeblarApi(
+            host=HOST, token="stale", token_refresh=fake_refresh
+        ) as api:
+            with pytest.raises(PeblarAuthenticationError):
+                await api.health()
+
+
+async def test_api_401_without_refresh_callback() -> None:
+    """Test PeblarApi 401 raises immediately when no token_refresh is set."""
+    with aioresponses() as mocked:
+        mocked.get(API_HEALTH_URL, status=401, body="", content_type="text/plain")
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarAuthenticationError):
+                await api.health()
+
+
+async def test_peblar_login_stores_password_for_refresh() -> None:
+    """Test that login() stores the password so rest_api() can refresh tokens."""
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=200, body="", content_type="text/plain")
+        mocked.get(
+            USER_CONFIG_URL, status=200, body=load_fixture("user_configuration.json")
+        )
+        mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            api = await peblar.rest_api()
+            await api.close()
+    assert api.token_refresh is not None
+
+
+async def test_peblar_refresh_without_login_raises() -> None:
+    """Test _refresh_api_token raises when login() was never called."""
+    peblar = Peblar(host=HOST)
+    with pytest.raises(PeblarAuthenticationError, match="no password stored"):
+        await peblar._refresh_api_token()  # pylint: disable=protected-access
+    await peblar.close()
+
+
 async def test_api_timeout() -> None:
     """Test PeblarApi request timeout is surfaced as PeblarConnectionTimeoutError."""
     with aioresponses() as mocked:

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import socket
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Self, TypedDict
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Self, TypedDict
 
 import orjson
 from aiohttp import ClientResponseError, CookieJar, hdrs
@@ -50,6 +50,8 @@ from .models import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
     from peblar.const import AccessMode, PackageType, SmartChargingMode
 
 
@@ -75,6 +77,7 @@ class Peblar:
     session: ClientSession | None = None
 
     _close_session: bool = False
+    _password: str | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize the Peblar object."""
@@ -129,7 +132,13 @@ class Peblar:
         return await response.text()
 
     async def login(self, *, password: str) -> None:
-        """Log in to the Peblar charger."""
+        """Log in to the Peblar charger.
+
+        The password is stored internally (only after a successful login)
+        so that PeblarApi instances created via rest_api() can
+        transparently re-authenticate when the API token becomes invalid
+        (e.g. after a charger reboot).
+        """
         await self.request(
             URL("auth/login"),
             method=hdrs.METH_POST,
@@ -137,6 +146,7 @@ class Peblar:
                 password=password,
             ),
         )
+        self._password = password
 
     async def rest_api(
         self,
@@ -169,7 +179,11 @@ class Peblar:
             msg = "The local REST API is not enabled for this device."
             raise PeblarError(msg)
 
-        return PeblarApi(host=self.host, token=await self.api_token())
+        return PeblarApi(
+            host=self.host,
+            token=await self.api_token(),
+            token_refresh=self._refresh_api_token,
+        )
 
     async def modbus_api(
         self,
@@ -333,6 +347,19 @@ class Peblar:
             data=user_configuration,
         )
 
+    async def _refresh_api_token(self) -> str:
+        """Re-login and return a fresh API token.
+
+        Called by PeblarApi when it receives a 401, allowing it to
+        transparently recover from token invalidation (e.g. after a
+        charger reboot or firmware update).
+        """
+        if self._password is None:
+            msg = "Cannot refresh API token: no password stored (call login() first)"
+            raise PeblarAuthenticationError(msg)
+        await self.login(password=self._password)
+        return await self.api_token()
+
     async def close(self) -> None:
         """Close open client session."""
         if self.session and self._close_session:
@@ -367,6 +394,9 @@ class PeblarApi:
     token: str
     request_timeout: float = 8
     session: ClientSession | None = None
+    token_refresh: Callable[[], Coroutine[Any, Any, str]] | None = field(
+        default=None, repr=False
+    )
 
     _close_session: bool = False
 
@@ -386,6 +416,7 @@ class PeblarApi:
         *,
         method: str = hdrs.METH_GET,
         data: BaseModel | None = None,
+        _refreshed: bool = False,
     ) -> str:
         """Handle a request to a Peblar charger Local REST API."""
         if self.session is None:
@@ -411,7 +442,16 @@ class PeblarApi:
             raise PeblarConnectionTimeoutError(msg) from exception
         except ClientResponseError as exception:
             if exception.status == 401:
-                msg = "Authentication error. Provided password is invalid."
+                # If a token_refresh callback is available and we haven't
+                # already retried, re-login and retry the request once.
+                # This handles token invalidation after charger reboots
+                # or firmware updates.
+                if not _refreshed and self.token_refresh is not None:
+                    self.token = await self.token_refresh()
+                    return await self.request(
+                        uri, method=method, data=data, _refreshed=True
+                    )
+                msg = "Authentication error. API token is invalid or expired."
                 raise PeblarAuthenticationError(msg) from exception
             msg = "Error occurred while communicating to the Peblar charger API"
             raise PeblarError(msg) from exception
