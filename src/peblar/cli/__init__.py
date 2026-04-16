@@ -19,6 +19,7 @@ from peblar.const import AccessMode, CPState, PackageType, SmartChargingMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarConnectionError,
+    PeblarError,
     PeblarUnsupportedFirmwareVersionError,
 )
 from peblar.peblar import Peblar
