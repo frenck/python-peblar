@@ -65,6 +65,14 @@
       'password',
       'quiet',
     ]),
+    'household-limit': list([
+      'disable',
+      'enable',
+      'host',
+      'limit',
+      'password',
+      'quiet',
+    ]),
     'identify': list([
       'host',
       'password',
@@ -225,6 +233,20 @@
   │ API Access mode │ ReadWrite │
   │ API version     │ 1.0       │
   └─────────────────┴───────────┘
+  
+  '''
+# ---
+# name: test_household_limit_show
+  '''
+     Peblar household power limit    
+  ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+  ┃ Property    ┃ Value             ┃
+  ┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+  │ Allowed     │ ✅                │
+  │ Enabled     │ ❌                │
+  │ Power limit │ 17.5 kW (17500 W) │
+  │ Source      │ notselected       │
+  └─────────────┴───────────────────┘
   
   '''
 # ---
