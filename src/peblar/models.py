@@ -209,8 +209,8 @@ class PeblarSystemInformation(BaseModel):
     ethernet_mac_address: str = field(metadata=field_options(alias="EthMacAddr"))
     firmware_version: str = field(metadata=field_options(alias="FwIdent"))
     hostname: str = field(metadata=field_options(alias="Hostname"))
-    hardware_fixed_cable_rating: int = field(
-        metadata=field_options(alias="HwFixedCableRating")
+    hardware_fixed_cable_rating: int | None = field(
+        default=None, metadata=field_options(alias="HwFixedCableRating")
     )
     hardware_firmware_compatibility: str = field(
         metadata=field_options(alias="HwFwCompat")
