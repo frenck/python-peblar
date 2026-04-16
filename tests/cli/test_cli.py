@@ -236,6 +236,44 @@ def test_system(
 
 
 # ---------------------------------------------------------------------------
+# --quiet / -q flag
+# ---------------------------------------------------------------------------
+
+
+def test_identify_quiet_suppresses_success(runner: CliRunner) -> None:
+    """Identify with --quiet suppresses the success message."""
+    mock_cls = _mock_peblar(login=None, identify=None)
+    exit_code, output = _invoke(runner, ["identify", *_AUTH, "--quiet"], mock_cls)
+    assert exit_code == 0
+    assert "Success" not in output
+
+
+def test_identify_quiet_short_flag(runner: CliRunner) -> None:
+    """Identify with -q suppresses the success message."""
+    mock_cls = _mock_peblar(login=None, identify=None)
+    exit_code, output = _invoke(runner, ["identify", *_AUTH, "-q"], mock_cls)
+    assert exit_code == 0
+    assert "Success" not in output
+
+
+def test_versions_quiet_still_prints_table(
+    runner: CliRunner,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Versions with --quiet still prints the table (read-only command)."""
+    versions = PeblarVersions.from_json(load_fixture("versions_current.json"))
+    available = PeblarVersions.from_json(load_fixture("versions_available.json"))
+    mock_cls = _mock_peblar(
+        login=None,
+        current_versions=versions,
+        available_versions=available,
+    )
+    exit_code, output = _invoke(runner, ["versions", *_AUTH, "--quiet"], mock_cls)
+    assert exit_code == 0
+    assert output == snapshot
+
+
+# ---------------------------------------------------------------------------
 # Error handlers
 # ---------------------------------------------------------------------------
 
