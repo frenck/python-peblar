@@ -1,4 +1,4 @@
-# Python: Asynchronous Python client for Peblar EV chargers
+# Python: Peblar EV Chargers
 
 [![GitHub Release][releases-shield]][releases]
 [![Python Versions][python-versions-shield]][pypi]
@@ -8,13 +8,14 @@
 
 [![Build Status][build-shield]][build]
 [![Code Coverage][codecov-shield]][codecov]
+[![OpenSSF Scorecard][scorecard-shield]][scorecard]
 [![Open in Dev Containers][devcontainer-shield]][devcontainer]
 
 [![Sponsor Frenck via GitHub Sponsors][github-sponsors-shield]][github-sponsors]
 
 [![Support Frenck on Patreon][patreon-shield]][patreon]
 
-Asynchronous Python client for Peblar's Rocksolid EV chargers
+Asynchronous Python client for Peblar's rock-solid EV chargers.
 
 ## About
 
@@ -23,7 +24,7 @@ programmatically. It is mainly created to allow third-party programs to
 automate the behavior of a Peblar charger.
 
 Additionally, this package contains a CLI tool, which can be used standalone,
-proving a command-line interface to control and monitor Peblar chargers.
+providing a command-line interface to control and monitor Peblar chargers.
 
 Known compatible and tested Peblar chargers:
 
@@ -44,10 +45,10 @@ pip install peblar[cli]
 
 ## CLI usage
 
-The Peblar CLI tool provided in this library provides all the functionalities
-this library provides but from the command line.
+The Peblar CLI tool exposes the full functionality of this library from the
+command line.
 
-The CLI comes with built-in help, which can be accessed by using the `--help`
+The CLI ships with built-in help, accessible via the `--help` flag:
 
 ```bash
 peblar --help
@@ -59,7 +60,7 @@ To scan for Peblar chargers on your network:
 peblar scan
 ```
 
-For more details, access the built-in help of the CLI using the `--help` flag.
+For more details on each command, use `--help` against any subcommand.
 
 ## Python usage
 
@@ -72,7 +73,7 @@ from peblar import Peblar
 
 
 async def main() -> None:
-    """Show example of programmatically control a Peblar charger."""
+    """Show an example of programmatically controlling a Peblar charger."""
     async with Peblar(host="192.168.1.123") as peblar:
         await peblar.login(password="Sup3rS3cr3t!")
 
@@ -117,33 +118,34 @@ the [Dev Container][devcontainer] feature of Visual Studio Code.
 
 [![Open in Dev Containers][devcontainer-shield]][devcontainer]
 
-This Python project is fully managed using the [uv] dependency manager. But also relies on the use of NodeJS for certain checks during development.
+This Python project is fully managed using the [Poetry][poetry] dependency
+manager. It also relies on NodeJS for certain checks during development.
 
 You need at least:
 
 - Python 3.11+
-- [uv][uv-install]
-- NodeJS 20+ (including NPM)
+- [Poetry][poetry-install]
+- NodeJS 24+ (including NPM)
 
 To install all packages, including all development requirements:
 
 ```bash
 npm install
-uv sync --extra cli
+poetry install --all-extras
 ```
 
-As this repository uses the [pre-commit][pre-commit] framework, all changes
+As this repository uses the [prek][prek] framework, all changes
 are linted and tested with each commit. You can run all checks and tests
 manually, using the following command:
 
 ```bash
-uv run pre-commit run --all-files
+poetry run prek run --all-files
 ```
 
 To run just the Python tests:
 
 ```bash
-uv run pytest
+poetry run pytest
 ```
 
 ## Authors & contributors
@@ -157,7 +159,7 @@ check [the contributor's page][contributors].
 
 MIT License
 
-Copyright (c) 2024 Franck Nijhof
+Copyright (c) 2024-2026 Franck Nijhof
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -179,7 +181,7 @@ SOFTWARE.
 
 [build-shield]: https://github.com/frenck/python-peblar/actions/workflows/tests.yaml/badge.svg
 [build]: https://github.com/frenck/python-peblar/actions/workflows/tests.yaml
-[codecov-shield]: https://codecov.io/gh/frenck/python-peblar/branch/master/graph/badge.svg
+[codecov-shield]: https://codecov.io/gh/frenck/python-peblar/branch/main/graph/badge.svg
 [codecov]: https://codecov.io/gh/frenck/python-peblar
 [contributors]: https://github.com/frenck/python-peblar/graphs/contributors
 [devcontainer-shield]: https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode
@@ -189,12 +191,14 @@ SOFTWARE.
 [github-sponsors]: https://github.com/sponsors/frenck
 [keepchangelog]: http://keepachangelog.com/en/1.0.0/
 [license-shield]: https://img.shields.io/github/license/frenck/python-peblar.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2023-2024.svg
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
 [patreon-shield]: https://frenck.dev/wp-content/uploads/2019/12/patreon.png
 [patreon]: https://www.patreon.com/frenck
-[uv-install]: https://docs.astral.sh/uv/getting-started/installation/
-[uv]: https://docs.astral.sh/uv/
-[pre-commit]: https://pre-commit.com/
+[poetry-install]: https://python-poetry.org/docs/#installation
+[poetry]: https://python-poetry.org
+[prek]: https://github.com/j178/prek
+[scorecard-shield]: https://api.scorecard.dev/projects/github.com/frenck/python-peblar/badge
+[scorecard]: https://scorecard.dev/viewer/?uri=github.com/frenck/python-peblar
 [project-stage-shield]: https://img.shields.io/badge/project%20stage-production%20ready-brightgreen.svg
 [pypi]: https://pypi.org/project/peblar/
 [python-versions-shield]: https://img.shields.io/pypi/pyversions/peblar

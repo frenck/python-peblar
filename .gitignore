@@ -88,11 +88,11 @@ docs/_build/
 venv/
 ENV/
 
-# mypy
-.mypy_cache/
+# ty
+.ty/
 
-# ruff
-.ruff_cache
+# peblar dump output
+dump/
 
 # Visual Studio Code
 .vscode
@@ -120,3 +120,4 @@ node_modules/
 
 # Deepcode AI
 .dccache
+.claude/

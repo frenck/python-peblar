@@ -1,127 +1,109 @@
 [project]
 name = "peblar"
 version = "0.0.0"
-license = "MIT"
 description = "Asynchronous Python client for Peblar EV chargers."
-authors = [{ name = "Franck Nijhof", email = "opensource@frenck.dev"}]
-maintainers = [{ name = "Franck Nijhof", email = "opensource@frenck.dev"}]
+authors = [{ name = "Franck Nijhof", email = "opensource@frenck.dev" }]
+maintainers = [{ name = "Franck Nijhof", email = "opensource@frenck.dev" }]
+license = "MIT"
+requires-python = ">=3.11"
 readme = "README.md"
+keywords = [
+  "api",
+  "async",
+  "bluebuilt",
+  "charger",
+  "chargers",
+  "client",
+  "ev",
+  "hybrid",
+  "home-assistant",
+  "ocpp",
+  "peblar",
+]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Framework :: AsyncIO",
   "Intended Audience :: Developers",
   "Natural Language :: English",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = [
-  "bluebuilt",
-  "charger",
-  "chargers",
-  "ev",
-  "hybrid",
-  "ocpp",
-  "peblar",
-]
-requires-python = ">=3.11"
+dynamic = ["dependencies"]
+packages = [{ include = "peblar", from = "src" }]
 dependencies = [
-  "aiohttp>=3.0.0",
-  "awesomeversion>=22.8.0",
-  "backoff>=2.2.1",
-  "mashumaro>=3.10",
-  "orjson>=3.9.8",
-  "yarl>=1.6.0",
+  'aiohttp (>=3.0.0)',
+  'awesomeversion (>=22.8.0)',
+  'mashumaro (>=3.10)',
+  'tenacity (>=9.0.0)',
+  'orjson (>=3.9.8)',
+  'yarl (>=1.6.0)',
 ]
 
 [project.optional-dependencies]
-cli = [
-  "typer>=0.15.1",
-  "zeroconf>=0.126.0",
-]
+cli = ["rich>=13.0.0", "typer>=0.15.1", "zeroconf>=0.126.0"]
 
 [project.scripts]
 peblar = "peblar.cli:cli"
 
+[tool.poetry]
+requires-poetry = '>=2.0'
+
+
 [project.urls]
+homepage = "https://github.com/frenck/python-peblar"
+repository = "https://github.com/frenck/python-peblar"
+documentation = "https://github.com/frenck/python-peblar"
+"Bug Tracker" = "https://github.com/frenck/python-peblar/issues"
 Changelog = "https://github.com/frenck/python-peblar/releases"
-Issues = "https://github.com/frenck/python-peblar/issues"
-Repository = "https://github.com/frenck/python-peblar"
+
+[tool.poetry.group.dev.dependencies]
+aioresponses = "0.7.8"
+codespell = "2.4.2"
+covdefaults = "2.3.0"
+coverage = { version = "7.13.5", extras = ["toml"] }
+pre-commit-hooks = "6.0.0"
+prek = "0.3.9"
+pylint = "4.0.5"
+pytest = "9.0.3"
+pytest-asyncio = "1.3.0"
+pytest-cov = "7.1.0"
+ruff = "0.15.10"
+safety = "3.7.0"
+syrupy = "5.1.0"
+ty = "0.0.29"
+typer = "0.24.1"
+yamllint = "1.38.0"
+zizmor = "1.24.1"
 
 [tool.coverage.run]
 plugins = ["covdefaults"]
 source = ["peblar"]
+branch = true
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 50
+fail_under = 95
 omit = ["src/peblar/cli/*"]
 
-[tool.mypy]
-# Specify the target platform details in config, so your developers are
-# free to run mypy on Windows, Linux, or macOS and get consistent
-# results.
-platform = "linux"
-python_version = "3.11"
-
-# show error messages from unrelated files
-follow_imports = "normal"
-
-# suppress errors about unsatisfied imports
-ignore_missing_imports = true
-
-# be strict
-check_untyped_defs = true
-disallow_any_generics = true
-disallow_incomplete_defs = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_decorators = true
-disallow_untyped_defs = true
-no_implicit_optional = true
-no_implicit_reexport = true
-strict_optional = true
-warn_incomplete_stub = true
-warn_no_return = true
-warn_redundant_casts = true
-warn_return_any = true
-warn_unused_configs = true
-warn_unused_ignores = true
-
+[tool.ty.environment]
+python-version = "3.11"
 
 [tool.pylint.MASTER]
-extension-pkg-whitelist = [
-  "orjson",
-]
-ignore = [
-  "tests",
-]
+extension-pkg-whitelist = ["orjson"]
+ignore = ["tests"]
 
 [tool.pylint.BASIC]
-good-names = [
-  "_",
-  "ex",
-  "fp",
-  "i",
-  "id",
-  "j",
-  "k",
-  "on",
-  "Run",
-  "T",
-]
+good-names = ["_", "ex", "fp", "i", "id", "j", "k", "on", "Run", "T"]
 
 [tool.pylint.DESIGN]
 max-attributes = 8
 
 [tool.pylint."MESSAGES CONTROL"]
-disable = [
-  "duplicate-code",
-  "format",
-  "unsubscriptable-object",
-]
+disable = ["duplicate-code", "format", "unsubscriptable-object"]
 
 [tool.pylint.SIMILARITIES]
 ignore-imports = true
@@ -132,53 +114,37 @@ max-line-length = 88
 [tool.pytest.ini_options]
 addopts = "--cov"
 asyncio_mode = "auto"
+testpaths = ["tests"]
 
 [tool.ruff.lint]
+select = ["ALL"]
 ignore = [
-  "ANN401", # Opinioated warning on disallowing dynamically typed expressions
-  "D203", # Conflicts with other rules
-  "D213", # Conflicts with other rules
-  "D417", # False positives in some occasions
+  "ANN401",  # Opinioated warning on disallowing dynamically typed expressions
+  "D203",    # Conflicts with other rules
+  "D213",    # Conflicts with other rules
+  "D417",    # False positives in some occasions
   "PLR2004", # Just annoying, not really useful
 
   # Conflicts with the Ruff formatter
   "COM812",
   "ISC001",
 ]
-select = ["ALL"]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
 
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+  "mashumaro.mixins.orjson.DataClassORJSONMixin",
+]
+
 [tool.ruff.lint.isort]
 known-first-party = ["peblar"]
-
-[tool.ruff.lint.flake8-type-checking]
-runtime-evaluated-base-classes = ["mashumaro.mixins.orjson.DataClassORJSONMixin"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 25
 
-[tool.uv]
-prerelease = "allow"
-dev-dependencies = [
-  "aresponses==3.0.0",
-  "codespell==2.4.2",
-  "covdefaults==2.3.0",
-  "coverage[toml]==7.13.5",
-  "mypy==1.20.1",
-  "pre-commit==4.5.1",
-  "pre-commit-hooks==6.0.0",
-  "pylint==4.0.5",
-  "pytest==9.0.3",
-  "pytest-asyncio==1.3.0",
-  "pytest-cov==7.1.0",
-  "ruff==0.15.10",
-  "syrupy==5.1.0",
-  "yamllint==1.38.0",
-]
-
 [build-system]
-requires = ["hatchling>=1.27.0"]
-build-backend = "hatchling.build"
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"

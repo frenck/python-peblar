@@ -1,7 +1,14 @@
 {
+  "containerEnv": {
+    "POETRY_VIRTUALENVS_IN_PROJECT": "true"
+  },
   "customizations": {
     "codespaces": {
-      "openFiles": ["README.md", "src/peblar/peblar.py", "src/peblar/models.py"]
+      "openFiles": [
+        "README.md",
+        "src/peblar/peblar.py",
+        "src/peblar/models.py"
+      ]
     },
     "vscode": {
       "extensions": [
@@ -27,10 +34,6 @@
         "coverage-gutters.xmlname": "coverage.xml",
         "python.analysis.extraPaths": ["${workspaceFolder}/src"],
         "python.defaultInterpreterPath": ".venv/bin/python",
-        "python.formatting.provider": "ruff",
-        "python.linting.enabled": true,
-        "python.linting.mypyEnabled": true,
-        "python.linting.pylintEnabled": true,
         "python.testing.cwd": "${workspaceFolder}",
         "python.testing.pytestArgs": ["--cov-report=xml"],
         "python.testing.pytestEnabled": true,
@@ -41,11 +44,15 @@
     }
   },
   "features": {
+    "ghcr.io/devcontainers-contrib/features/poetry:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/va-h/devcontainers-features/uv:1": {}
+    "ghcr.io/devcontainers/features/python:1": {
+      "installTools": false,
+      "version": "3.14"
+    }
   },
-  "image": "mcr.microsoft.com/devcontainers/python:3.14",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "name": "Asynchronous Python client for Peblar EV chargers",
-  "updateContentCommand": ". ${NVM_DIR}/nvm.sh && nvm install && nvm use && npm install && uv sync --extra cli && uv run pre-commit install"
+  "updateContentCommand": ". ${NVM_DIR}/nvm.sh && nvm install && nvm use && npm install && poetry install --all-extras && poetry run prek install"
 }

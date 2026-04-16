@@ -1,0 +1,7 @@
+{
+  "ChargeCurrentLimit": 16000,
+  "ChargeCurrentLimitActual": 11399,
+  "ChargeCurrentLimitSource": "Dynamic load balancing",
+  "CpState": "State B",
+  "Force1Phase": false
+}

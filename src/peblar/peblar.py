@@ -7,10 +7,15 @@ import socket
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
-import backoff
 import orjson
 from aiohttp import ClientResponseError, CookieJar, hdrs
 from aiohttp.client import ClientError, ClientSession
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 from yarl import URL
 
 from .exceptions import (
@@ -44,7 +49,7 @@ if TYPE_CHECKING:
 
 @dataclass(kw_only=True)
 class Peblar:
-    """Main class for handling connections with a Peblar EV chargers."""
+    """Main class for handling connections with Peblar EV chargers."""
 
     host: str
     request_timeout: float = 8
@@ -56,11 +61,11 @@ class Peblar:
         """Initialize the Peblar object."""
         self.url = URL.build(scheme="http", host=self.host, path="/api/v1/")
 
-    @backoff.on_exception(
-        backoff.expo,
-        PeblarConnectionError,
-        max_tries=3,
-        logger=None,
+    @retry(
+        retry=retry_if_exception_type(PeblarConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(),
+        reraise=True,
     )
     async def request(
         self,
@@ -73,7 +78,7 @@ class Peblar:
         if self.session is None:
             self.session = ClientSession(
                 cookie_jar=CookieJar(unsafe=True),
-                json_serialize=orjson.dumps,  # type: ignore[arg-type]
+                json_serialize=orjson.dumps,  # ty: ignore[invalid-argument-type]
             )
             self._close_session = True
 
@@ -105,7 +110,7 @@ class Peblar:
         return await response.text()
 
     async def login(self, *, password: str) -> None:
-        """Login into the Peblar charger."""
+        """Log in to the Peblar charger."""
         await self.request(
             URL("auth/login"),
             method=hdrs.METH_POST,
@@ -275,11 +280,11 @@ class PeblarApi:
         """Initialize the Peblar object."""
         self.url = URL.build(scheme="http", host=self.host, path="/api/wlac/v1/")
 
-    @backoff.on_exception(
-        backoff.expo,
-        PeblarConnectionError,
-        max_tries=3,
-        logger=None,
+    @retry(
+        retry=retry_if_exception_type(PeblarConnectionError),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(),
+        reraise=True,
     )
     async def request(
         self,
@@ -291,7 +296,7 @@ class PeblarApi:
         """Handle a request to a Peblar charger Local REST API."""
         if self.session is None:
             self.session = ClientSession(
-                json_serialize=orjson.dumps,  # type: ignore[arg-type]
+                json_serialize=orjson.dumps,  # ty: ignore[invalid-argument-type]
             )
             self._close_session = True
 
