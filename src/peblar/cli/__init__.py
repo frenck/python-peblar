@@ -299,6 +299,7 @@ async def unlock_cmd(
 
 
 @cli.command("household-limit")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 async def household_limit_cmd(
     host: Annotated[
         str,
