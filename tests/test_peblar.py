@@ -542,7 +542,7 @@ async def test_peblar_refresh_without_login_raises() -> None:
     """Test _refresh_api_token raises when login() was never called."""
     peblar = Peblar(host=HOST)
     with pytest.raises(PeblarAuthenticationError, match="no password stored"):
-        await peblar._refresh_api_token()
+        await peblar._refresh_api_token()  # pylint: disable=protected-access
     await peblar.close()
 
 
