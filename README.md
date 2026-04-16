@@ -7,6 +7,7 @@
 [![License][license-shield]](LICENSE.md)
 
 [![Build Status][build-shield]][build]
+[![CodSpeed][codspeed-shield]][codspeed]
 [![Code Coverage][codecov-shield]][codecov]
 [![OpenSSF Scorecard][scorecard-shield]][scorecard]
 [![Open in Dev Containers][devcontainer-shield]][devcontainer]
@@ -181,6 +182,8 @@ SOFTWARE.
 
 [build-shield]: https://github.com/frenck/python-peblar/actions/workflows/tests.yaml/badge.svg
 [build]: https://github.com/frenck/python-peblar/actions/workflows/tests.yaml
+[codspeed-shield]: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+[codspeed]: https://codspeed.io/frenck/python-peblar
 [codecov-shield]: https://codecov.io/gh/frenck/python-peblar/branch/main/graph/badge.svg
 [codecov]: https://codecov.io/gh/frenck/python-peblar
 [contributors]: https://github.com/frenck/python-peblar/graphs/contributors
