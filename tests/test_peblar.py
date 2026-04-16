@@ -21,6 +21,7 @@ from peblar.exceptions import (
     PeblarError,
 )
 from peblar.models import (
+    PeblarSetUserConfiguration,
     PeblarSmartCharging,
     PeblarUserConfiguration,
     PeblarVersions,
@@ -188,6 +189,16 @@ async def test_smart_charging_default() -> None:
         mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
         async with Peblar(host=HOST) as peblar:
             await peblar.smart_charging(SmartChargingMode.DEFAULT)
+
+
+async def test_update_user_configuration() -> None:
+    """Test update_user_configuration PATCHes the user config endpoint."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.update_user_configuration(
+                PeblarSetUserConfiguration(user_defined_charge_limit_current=10),
+            )
 
 
 async def test_system_information() -> None:

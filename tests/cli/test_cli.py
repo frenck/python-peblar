@@ -161,6 +161,25 @@ def test_config(
     assert output == snapshot
 
 
+def test_config_set_charge_limit(runner: CliRunner) -> None:
+    """Config command with --charge-current-limit PATCHes the charger."""
+    mock_cls = _mock_peblar(login=None, update_user_configuration=None)
+    exit_code, output = _invoke(
+        runner, ["config", *_AUTH, "--charge-current-limit", "10"], mock_cls
+    )
+    assert exit_code == 0
+    assert "Success!" in output
+
+
+def test_config_charge_limit_too_low(runner: CliRunner) -> None:
+    """Config command rejects a charge limit below 6A."""
+    mock_cls = _mock_peblar(login=None)
+    exit_code, _ = _invoke(
+        runner, ["config", *_AUTH, "--charge-current-limit", "3"], mock_cls
+    )
+    assert exit_code != 0
+
+
 def test_identify(runner: CliRunner) -> None:
     """Identify command invokes peblar.identify()."""
     mock_cls = _mock_peblar(login=None, identify=None)
