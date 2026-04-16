@@ -298,6 +298,109 @@ async def unlock_cmd(
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
+@cli.command("household-limit")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+async def household_limit_cmd(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    limit: Annotated[
+        int | None,
+        typer.Option(
+            help="Household power limit in watts",
+            show_default=False,
+        ),
+    ] = None,
+    enable: Annotated[
+        bool,
+        typer.Option(
+            help="Enable the household power limit",
+        ),
+    ] = False,
+    disable: Annotated[
+        bool,
+        typer.Option(
+            help="Disable the household power limit",
+        ),
+    ] = False,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Show or change the household power limit.
+
+    Without flags, shows the current setting. Pass --limit to set the
+    power limit (in watts), --enable / --disable to toggle it.
+    """
+    if enable and disable:
+        msg = "--enable cannot be used with --disable."
+        raise typer.BadParameter(msg)
+
+    has_change = limit is not None or enable or disable
+    if has_change:
+        status_ctx = (
+            contextlib.nullcontext()
+            if quiet
+            else console.status("[cyan]Adjusting...", spinner="toggle12")
+        )
+        enabled: bool | None = None
+        if enable:
+            enabled = True
+        elif disable:
+            enabled = False
+
+        with status_ctx:
+            async with Peblar(host=host) as peblar:
+                await peblar.login(password=password)
+                await peblar.update_user_configuration(
+                    PeblarSetUserConfiguration(
+                        user_defined_household_power_limit=limit,
+                        user_defined_household_power_limit_enabled=enabled,
+                    ),
+                )
+        print_cli_success(quiet=quiet, message="✅[green]Success!")
+        return
+
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        config = await peblar.user_configuration()
+
+    table = Table(title="Peblar household power limit")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row(
+        "Allowed",
+        convert_to_string(config.user_defined_household_power_limit_allowed),
+    )
+    table.add_row(
+        "Enabled",
+        convert_to_string(config.user_defined_household_power_limit_enabled),
+    )
+    table.add_row(
+        "Power limit",
+        f"{round(config.user_defined_household_power_limit / 1000, 3)} kW"
+        f" ({config.user_defined_household_power_limit} W)",
+    )
+    table.add_row("Source", config.user_defined_household_power_limit_source)
+
+    console.print(table)
+
+
 @cli.command("buzzer")
 async def buzzer(
     host: Annotated[

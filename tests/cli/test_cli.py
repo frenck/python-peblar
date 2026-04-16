@@ -180,6 +180,43 @@ def test_config_charge_limit_too_low(runner: CliRunner) -> None:
     assert exit_code != 0
 
 
+def test_household_limit_set(runner: CliRunner) -> None:
+    """Household-limit command with --limit PATCHes the charger."""
+    mock_cls = _mock_peblar(login=None, update_user_configuration=None)
+    exit_code, output = _invoke(
+        runner,
+        ["household-limit", *_AUTH, "--limit", "7500", "--enable"],
+        mock_cls,
+    )
+    assert exit_code == 0
+    assert "Success!" in output
+
+
+def test_household_limit_show(
+    runner: CliRunner,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Household-limit command without flags shows the current setting."""
+    config = PeblarUserConfiguration.from_json(
+        load_fixture("user_configuration.json"),
+    )
+    mock_cls = _mock_peblar(login=None, user_configuration=config)
+    exit_code, output = _invoke(runner, ["household-limit", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert output == snapshot
+
+
+def test_household_limit_enable_disable_conflict(runner: CliRunner) -> None:
+    """Household-limit command rejects --enable and --disable together."""
+    mock_cls = _mock_peblar(login=None)
+    exit_code, _ = _invoke(
+        runner,
+        ["household-limit", *_AUTH, "--enable", "--disable"],
+        mock_cls,
+    )
+    assert exit_code != 0
+
+
 def test_identify(runner: CliRunner) -> None:
     """Identify command invokes peblar.identify()."""
     mock_cls = _mock_peblar(login=None, identify=None)

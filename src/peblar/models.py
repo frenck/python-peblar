@@ -484,6 +484,14 @@ class PeblarSetUserConfiguration(BaseModel):
     user_defined_charge_limit_current: int | None = field(
         default=None, metadata=field_options(alias="UserDefinedChargeLimitCurrent")
     )
+    user_defined_household_power_limit: int | None = field(
+        default=None,
+        metadata=field_options(alias="UserDefinedHouseholdPowerLimit"),
+    )
+    user_defined_household_power_limit_enabled: bool | None = field(
+        default=None,
+        metadata=field_options(alias="UserDefinedHouseholdPowerLimitEnable"),
+    )
 
 
 @dataclass(kw_only=True)

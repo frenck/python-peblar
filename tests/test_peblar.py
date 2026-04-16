@@ -207,6 +207,19 @@ async def test_smart_charging_default() -> None:
             await peblar.smart_charging(SmartChargingMode.DEFAULT)
 
 
+async def test_update_user_configuration_household_limit() -> None:
+    """Test setting the household power limit via update_user_configuration."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.update_user_configuration(
+                PeblarSetUserConfiguration(
+                    user_defined_household_power_limit=7500,
+                    user_defined_household_power_limit_enabled=True,
+                ),
+            )
+
+
 async def test_socket_lock() -> None:
     """Test socket_lock PATCHes the user config endpoint."""
     with aioresponses() as mocked:
