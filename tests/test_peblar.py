@@ -539,3 +539,56 @@ def test_smart_charging_model_pure_solar() -> None:
     obj = PeblarSmartCharging(smart_charging=SmartChargingMode.PURE_SOLAR)
     assert obj.solar_charging_enable is True
     assert obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR
+
+
+# ---------------------------------------------------------------------------
+# RFID token operations
+# ---------------------------------------------------------------------------
+
+STANDALONELIST_URL = BASE_URL + "config/auth/standalonelist"
+
+
+async def test_rfid_tokens() -> None:
+    """Test fetching the list of RFID tokens."""
+    with aioresponses() as mocked:
+        mocked.get(
+            STANDALONELIST_URL,
+            status=200,
+            body=load_fixture("standalonelist.json"),
+        )
+        async with Peblar(host=HOST) as peblar:
+            tokens = await peblar.rfid_tokens()
+    assert len(tokens) == 2
+    assert tokens[0].rfid_token_uid == "0123456789ABCD"
+    assert tokens[0].rfid_token_description == "My RFID Card"
+    assert tokens[1].rfid_token_uid == "0123456789ABCE"
+    assert tokens[1].rfid_token_description == "My Other RFID Card"
+
+
+async def test_add_rfid_token() -> None:
+    """Test adding an RFID token to the standalone auth list."""
+    with aioresponses() as mocked:
+        mocked.post(
+            STANDALONELIST_URL,
+            status=200,
+            body="",
+            content_type="text/plain",
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.add_rfid_token(
+                rfid_token_uid="0123456789ABCD",
+                rfid_token_description="My Charge Card",
+            )
+
+
+async def test_delete_rfid_token() -> None:
+    """Test deleting an RFID token from the standalone auth list."""
+    with aioresponses() as mocked:
+        mocked.delete(
+            STANDALONELIST_URL + "/0123456789ABCD",
+            status=200,
+            body="",
+            content_type="text/plain",
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.delete_rfid_token(uid="0123456789ABCD")

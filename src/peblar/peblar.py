@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Self, TypedDict  # noqa: UP035
+from typing import TYPE_CHECKING, Self, TypedDict
 
 import orjson
 from aiohttp import ClientResponseError, CookieJar, hdrs
