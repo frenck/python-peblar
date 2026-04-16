@@ -245,7 +245,7 @@ async def unlock(
     print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
-@cli.command("socket-lock")
+@cli.command("lock")
 async def socket_lock(
     host: Annotated[
         str,

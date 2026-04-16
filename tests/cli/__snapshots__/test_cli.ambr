@@ -81,6 +81,13 @@
       'password',
       'quiet',
     ]),
+    'lock': list([
+      'host',
+      'lock',
+      'password',
+      'quiet',
+      'unlock_socket',
+    ]),
     'meter': list([
       'host',
       'password',
@@ -117,13 +124,6 @@
       'quiet',
       'scheduled',
       'smart_solar',
-    ]),
-    'socket-lock': list([
-      'host',
-      'lock',
-      'password',
-      'quiet',
-      'unlock_socket',
     ]),
     'system': list([
       'host',
