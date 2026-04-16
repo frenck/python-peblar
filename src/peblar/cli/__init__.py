@@ -357,15 +357,19 @@ async def household_limit_cmd(
             if quiet
             else console.status("[cyan]Adjusting...", spinner="toggle12")
         )
+        enabled: bool | None = None
+        if enable:
+            enabled = True
+        elif disable:
+            enabled = False
+
         with status_ctx:
             async with Peblar(host=host) as peblar:
                 await peblar.login(password=password)
                 await peblar.update_user_configuration(
                     PeblarSetUserConfiguration(
                         user_defined_household_power_limit=limit,
-                        user_defined_household_power_limit_enabled=enable or None
-                        if not disable
-                        else False,
+                        user_defined_household_power_limit_enabled=enabled,
                     ),
                 )
         print_cli_success(quiet=quiet, message="✅[green]Success!")
@@ -389,7 +393,7 @@ async def household_limit_cmd(
     )
     table.add_row(
         "Power limit",
-        f"{round(config.user_defined_household_power_limit / 1000, 1)} kW"
+        f"{round(config.user_defined_household_power_limit / 1000, 3)} kW"
         f" ({config.user_defined_household_power_limit} W)",
     )
     table.add_row("Source", config.user_defined_household_power_limit_source)
