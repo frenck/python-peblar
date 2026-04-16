@@ -76,6 +76,19 @@ async def test_identify() -> None:
             await peblar.identify()
 
 
+async def test_socket_unlock() -> None:
+    """Test socket_unlock posts to the socket-unlock endpoint."""
+    with aioresponses() as mocked:
+        mocked.post(
+            BASE_URL + "system/socket-unlock",
+            status=200,
+            body="",
+            content_type="text/plain",
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.socket_unlock()
+
+
 async def test_request_with_shared_session() -> None:
     """Test a passed-in shared session is reused by the client."""
     with aioresponses() as mocked:
@@ -394,6 +407,25 @@ async def test_api_ev_interface_patch_then_read() -> None:
         async with PeblarApi(host=HOST, token="t") as api:
             ev = await api.ev_interface(charge_current_limit=10000)
     assert ev.charge_current_limit == 16000
+
+
+async def test_api_ev_interface_lock_state() -> None:
+    """Test lock_state is parsed from a socket charger response."""
+    body = patched_fixture("ev_interface.json", LockState=True)
+    with aioresponses() as mocked:
+        mocked.get(API_EV_URL, status=200, body=body)
+        async with PeblarApi(host=HOST, token="t") as api:
+            ev = await api.ev_interface()
+    assert ev.lock_state is True
+
+
+async def test_api_ev_interface_lock_state_absent() -> None:
+    """Test lock_state is None on fixed-cable chargers (field absent)."""
+    with aioresponses() as mocked:
+        mocked.get(API_EV_URL, status=200, body=load_fixture("ev_interface.json"))
+        async with PeblarApi(host=HOST, token="t") as api:
+            ev = await api.ev_interface()
+    assert ev.lock_state is None
 
 
 async def test_api_401_authentication_error() -> None:

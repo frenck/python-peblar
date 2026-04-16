@@ -111,6 +111,11 @@
       'password',
       'quiet',
     ]),
+    'unlock': list([
+      'host',
+      'password',
+      'quiet',
+    ]),
     'update': list([
       'customization',
       'firmware',

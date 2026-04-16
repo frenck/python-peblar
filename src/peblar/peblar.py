@@ -257,6 +257,10 @@ class Peblar:
             method=hdrs.METH_DELETE,
         )
 
+    async def socket_unlock(self) -> None:
+        """Unlock the socket of the Peblar charger."""
+        await self.request(URL("system/socket-unlock"), method=hdrs.METH_POST)
+
     async def reboot(self) -> None:
         """Reboot the Peblar charger."""
         await self.request(

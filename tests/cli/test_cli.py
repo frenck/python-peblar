@@ -187,6 +187,13 @@ def test_identify(runner: CliRunner) -> None:
     assert exit_code == 0
 
 
+def test_unlock(runner: CliRunner) -> None:
+    """Unlock command invokes peblar.socket_unlock()."""
+    mock_cls = _mock_peblar(login=None, socket_unlock=None)
+    exit_code, _ = _invoke(runner, ["unlock", *_AUTH], mock_cls)
+    assert exit_code == 0
+
+
 def test_reboot(runner: CliRunner) -> None:
     """Reboot command invokes peblar.reboot()."""
     mock_cls = _mock_peblar(login=None, reboot=None)
