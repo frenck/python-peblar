@@ -1,7 +1,7 @@
 {
   "ChargeCurrentLimit": 16000,
-  "ChargeCurrentLimitActual": 16000,
-  "ChargeCurrentLimitSource": "Current limiter",
-  "CpState": "State C",
+  "ChargeCurrentLimitActual": 11399,
+  "ChargeCurrentLimitSource": "Dynamic load balancing",
+  "CpState": "State B",
   "Force1Phase": false
 }

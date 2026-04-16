@@ -1,7 +1,9 @@
 """Asynchronous Python client for Peblar EV chargers."""
 
 import asyncio
+import json
 import sys
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -9,6 +11,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
+from yarl import URL
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
@@ -1109,6 +1112,195 @@ async def scan() -> None:
             console.print("\n[green]Control-C pressed, stopping scan")
             await browser.async_cancel()
             await zeroconf.async_close()
+
+
+# Keys whose values are replaced wholesale when anonymizing.
+_REDACT_MAP: dict[str, str] = {
+    "ApiToken": "0" * 64,
+    "CustomCustomerId": "",
+    "CustomerId": "PBLR-0000001",
+    "CustomerUpdatePackagePubKey": "<redacted>",
+    "Hostname": "PBLR-0000001",
+}
+
+# Keys that hold MAC addresses (anonymized to sequential fake MACs).
+_MAC_KEYS = frozenset(
+    {
+        "EthMacAddr",
+        "WlanApMacAddr",
+        "WlanStaMacAddr",
+    }
+)
+
+# Keys that hold serial numbers / part numbers.
+_SERIAL_KEYS = frozenset({"MainboardSn", "ProductSn"})
+_PART_NUMBER_KEYS = frozenset({"MainboardPn", "ProductPn"})
+
+# Keys that hold network addresses or URIs that could leak device topology.
+_ADDRESS_KEYS = frozenset({"BopHomeWizardAddress", "SeccOcppUri"})
+
+# Keys containing JSON-encoded parameter strings that may embed device
+# addresses (e.g. ``{"address":"p1meter-093586"}``).
+_JSON_PARAM_KEYS = frozenset(
+    {
+        "BopSourceParameters",
+        "SolarChargingSourceParameters",
+        "UserDefinedHouseholdPowerLimitSourceParameters",
+    }
+)
+
+
+def _anonymize(data: dict[str, object]) -> dict[str, object]:
+    """Strip personally identifiable or device-unique fields from a response.
+
+    Matching is done by key name so the function works across different
+    chargers and firmware versions. Unknown keys are passed through unchanged.
+    """
+    mac_counter = 0
+    result: dict[str, object] = {}
+
+    for key, original in data.items():
+        if key in _REDACT_MAP:
+            result[key] = _REDACT_MAP[key]
+        elif key in _MAC_KEYS:
+            mac_counter += 1
+            result[key] = f"AA:BB:CC:DD:EE:{mac_counter:02X}"
+        elif key in _SERIAL_KEYS:
+            result[key] = "00-00-AAA-000"
+        elif key in _PART_NUMBER_KEYS:
+            result[key] = "0000-0000-0000"
+        elif key in _ADDRESS_KEYS:
+            result[key] = ""
+        elif key in _JSON_PARAM_KEYS and isinstance(original, str):
+            result[key] = _anonymize_json_params(original)
+        else:
+            result[key] = original
+
+    return result
+
+
+def _anonymize_json_params(value: str) -> str:
+    """Redact address fields inside a JSON-encoded parameter string."""
+    try:
+        params = json.loads(value)
+        if isinstance(params, dict):
+            for param_key in params:
+                if "address" in param_key.lower():
+                    params[param_key] = "redacted-host"
+            return json.dumps(params)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return value
+
+
+@cli.command("dump")
+async def dump(  # noqa: PLR0913
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            help="Directory to write JSON fixtures into",
+        ),
+    ] = Path("dump"),
+    raw: Annotated[
+        bool,
+        typer.Option(
+            help="Skip anonymization and write raw charger responses",
+        ),
+    ] = False,
+) -> None:
+    """Dump API responses from the charger as JSON fixture files.
+
+    Connects to the charger, fetches every available endpoint, and writes
+    the responses as pretty-printed JSON files into the output directory.
+    Useful for capturing real-world responses for the test suite.
+
+    By default, sensitive fields (serial numbers, MAC addresses, API tokens,
+    public keys, network addresses) are anonymized. Pass --raw to keep the
+    original values for personal debugging.
+
+    The Local REST API endpoints are only dumped when the API is enabled
+    on the charger.
+    """
+    output.mkdir(parents=True, exist_ok=True)
+
+    def _write(name: str, data: str) -> None:
+        path = output / name
+        parsed = json.loads(data)
+        if not raw:
+            parsed = _anonymize(parsed)
+        path.write_text(json.dumps(parsed, indent=2) + "\n")
+        console.print(f"  [green]Wrote[/green] {path}")
+
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+
+        console.print("[cyan bold]Dumping main API endpoints...")
+
+        _write(
+            "system_information.json",
+            await peblar.request(URL("system/info")),
+        )
+        _write(
+            "user_configuration.json",
+            await peblar.request(URL("config/user")),
+        )
+        _write(
+            "versions_current.json",
+            await peblar.request(
+                URL("system/software/automatic-update/current-versions"),
+            ),
+        )
+        _write(
+            "versions_available.json",
+            await peblar.request(
+                URL("system/software/automatic-update/available-versions"),
+            ),
+        )
+        _write(
+            "api_token.json",
+            await peblar.request(URL("config/api-token")),
+        )
+
+        # Local REST API endpoints (only available when enabled)
+        console.print("\n[cyan bold]Dumping Local REST API endpoints...")
+        try:
+            async with await peblar.rest_api() as api:
+                _write("health.json", await api.request(URL("health")))
+                _write("system.json", await api.request(URL("system")))
+                _write("meter.json", await api.request(URL("meter")))
+                _write("ev_interface.json", await api.request(URL("evinterface")))
+        except PeblarConnectionError:
+            console.print("  [yellow]Skipped (could not connect to REST API)")
+        except PeblarError:
+            console.print(
+                "  [yellow]Skipped (Local REST API not enabled or not allowed)"
+            )
+
+    if raw:
+        console.print(
+            "\n[yellow bold]Warning:[/yellow bold] --raw was used. Review the"
+            " output for sensitive data before sharing or committing."
+        )
+    console.print("\n[green bold]Done!")
 
 
 if __name__ == "__main__":

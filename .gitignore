@@ -94,6 +94,9 @@ ENV/
 # pytest-codspeed local results
 .codspeed/
 
+# peblar dump output
+dump/
+
 # Visual Studio Code
 .vscode
 

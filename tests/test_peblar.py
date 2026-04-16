@@ -197,7 +197,7 @@ async def test_system_information() -> None:
         async with Peblar(host=HOST) as peblar:
             info = await peblar.system_information()
     assert info.hostname == "PBLR-0000001"
-    assert info.product_model_name == "Peblar Home"
+    assert info.product_model_name == "WLAC1-H11R0WE0ICR00"
     assert info.hardware_max_current == 16
 
 
@@ -234,10 +234,10 @@ async def test_current_versions() -> None:
         )
         async with Peblar(host=HOST) as peblar:
             versions = await peblar.current_versions()
-    assert versions.firmware == "1.6.1+1+WL-1.0"
-    assert versions.customization == "Peblar-1.8"
+    assert versions.firmware == "1.9.0+1+WL-1"
+    assert versions.customization == "Peblar-1.14"
     assert versions.firmware_version is not None
-    assert str(versions.firmware_version) == "1.6.1"
+    assert str(versions.firmware_version) == "1.9.0"
 
 
 async def test_available_versions() -> None:
@@ -250,7 +250,7 @@ async def test_available_versions() -> None:
         )
         async with Peblar(host=HOST) as peblar:
             versions = await peblar.available_versions()
-    assert versions.firmware == "1.7.0+1+WL-1.0"
+    assert versions.firmware == "1.9.0+1+WL-1"
 
 
 async def test_api_token() -> None:
@@ -259,7 +259,7 @@ async def test_api_token() -> None:
         mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
         async with Peblar(host=HOST) as peblar:
             token = await peblar.api_token()
-    assert token == "test-api-token-abc123"
+    assert token == "0" * 64
 
 
 async def test_api_token_generate_new() -> None:
@@ -269,7 +269,7 @@ async def test_api_token_generate_new() -> None:
         mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
         async with Peblar(host=HOST) as peblar:
             token = await peblar.api_token(generate_new_api_token=True)
-    assert token == "test-api-token-abc123"
+    assert token == "0" * 64
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +307,7 @@ async def test_rest_api_enable_flow() -> None:
         async with Peblar(host=HOST) as peblar:
             api = await peblar.rest_api(enable=True)
             await api.close()
-    assert api.token == "test-api-token-abc123"
+    assert api.token == "0" * 64
 
 
 async def test_modbus_api_disallowed() -> None:
@@ -353,8 +353,8 @@ async def test_api_meter() -> None:
         mocked.get(API_METER_URL, status=200, body=load_fixture("meter.json"))
         async with PeblarApi(host=HOST, token="t") as api:
             meter = await api.meter()
-    assert meter.power_total == 4140
-    assert meter.current_total == 18000
+    assert meter.power_total == 0
+    assert meter.current_total == 0
 
 
 async def test_api_system() -> None:
@@ -363,7 +363,7 @@ async def test_api_system() -> None:
         mocked.get(API_SYSTEM_URL, status=200, body=load_fixture("system.json"))
         async with PeblarApi(host=HOST, token="t") as api:
             system = await api.system()
-    assert system.uptime == 3600
+    assert system.uptime == 3514985
     assert system.phase_count == 3
 
 

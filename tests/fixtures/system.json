@@ -1,12 +1,12 @@
 {
   "ActiveErrorCodes": [],
   "ActiveWarningCodes": [],
-  "CellularSignalStrength": -90,
-  "FirmwareVersion": "1.6.1+1+WL-1.0",
+  "CellularSignalStrength": null,
+  "FirmwareVersion": "1.9.0+1+WL-1",
   "Force1PhaseAllowed": true,
   "PhaseCount": 3,
-  "ProductPn": "PN-0001",
-  "ProductSn": "SN-0001",
-  "Uptime": 3600,
-  "WlanSignalStrength": -60
+  "ProductPn": "0000-0000-0000",
+  "ProductSn": "00-00-AAA-000",
+  "Uptime": 3514985,
+  "WlanSignalStrength": null
 }
