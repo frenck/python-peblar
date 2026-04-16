@@ -21,6 +21,7 @@
       'write',
     ]),
     'config': list([
+      'charge_current_limit',
       'host',
       'password',
     ]),

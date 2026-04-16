@@ -549,12 +549,12 @@ async def user_configuration(  # pylint: disable=too-many-statements
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
         if charge_current_limit is not None:
-            await peblar.set_user_configuration(
+            await peblar.update_user_configuration(
                 PeblarSetUserConfiguration(
-                    user_defined_charge_limit_current=charge_current_limit
-                )
+                    user_defined_charge_limit_current=charge_current_limit,
+                ),
             )
-            console.print("✅[green]Success!")
+            console.print("Success!")
             return
         config = await peblar.user_configuration()
 

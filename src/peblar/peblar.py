@@ -240,14 +240,16 @@ class Peblar:
         result = await self.request(URL("config/user"))
         return PeblarUserConfiguration.from_json(result)
 
-    async def set_user_configuration(
-        self, user_configuration: PeblarSetUserConfiguration
-    ) -> PeblarUserConfiguration:
-        """Set (part of) the user configuration."""
-        result = await self.request(
-            URL("config/user"), method=hdrs.METH_PATCH, data=user_configuration
+    async def update_user_configuration(
+        self,
+        user_configuration: PeblarSetUserConfiguration,
+    ) -> None:
+        """Update (part of) the user configuration."""
+        await self.request(
+            URL("config/user"),
+            method=hdrs.METH_PATCH,
+            data=user_configuration,
         )
-        return PeblarUserConfiguration.from_json(result)
 
     async def close(self) -> None:
         """Close open client session."""
