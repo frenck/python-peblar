@@ -15,6 +15,7 @@
       'description',
       'host',
       'password',
+      'quiet',
       'uid',
     ]),
     'api': list([
@@ -36,6 +37,7 @@
     'del-rfid-token': list([
       'host',
       'password',
+      'quiet',
       'uid',
     ]),
     'dump': list([
@@ -89,6 +91,7 @@
     'rfid-tokens': list([
       'host',
       'password',
+      'quiet',
     ]),
     'scan': list([
       'quiet',

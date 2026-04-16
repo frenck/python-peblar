@@ -889,6 +889,7 @@ async def rfid_tokens(
             envvar="PEBLAR_PASSWORD",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,  # noqa: ARG001  # pylint: disable=unused-argument
 ) -> None:
     """List RFID tokens in the standalone auth list."""
     async with Peblar(host=host) as peblar:
@@ -942,16 +943,22 @@ async def add_rfid_token(
             show_default=False,
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Add an RFID token to the standalone auth list."""
-    with console.status("[cyan]Adding RFID token...", spinner="toggle12"):
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Adding RFID token...", spinner="toggle12")
+    )
+    with status_ctx:
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.add_rfid_token(
                 rfid_token_uid=uid,
                 rfid_token_description=description,
             )
-    console.print("✅[green]Success!")
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
 @cli.command("del-rfid-token")
@@ -982,13 +989,19 @@ async def del_rfid_token(
             prompt="UID",
         ),
     ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Remove an RFID token from the standalone auth list."""
-    with console.status("[cyan]Removing RFID token...", spinner="toggle12"):
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Removing RFID token...", spinner="toggle12")
+    )
+    with status_ctx:
         async with Peblar(host=host) as peblar:
             await peblar.login(password=password)
             await peblar.delete_rfid_token(uid=uid)
-    console.print("✅[green]Success!")
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
 @cli.command("ev")
