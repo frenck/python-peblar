@@ -91,9 +91,6 @@ ENV/
 # ty
 .ty/
 
-# pytest-codspeed local results
-.codspeed/
-
 # peblar dump output
 dump/
 
