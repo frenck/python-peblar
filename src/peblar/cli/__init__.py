@@ -1456,9 +1456,16 @@ async def system(
 async def scan(
     quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
-    """Scan for Peblar chargers on the network."""
+    """Scan for Peblar chargers on the network.
+
+    Browses both the Peblar REST API service (_pblr._tcp, firmware 1.8+)
+    and the legacy HTTP service (_http._tcp, older firmware). Legacy HTTP
+    results are filtered by the PBLR- hostname prefix. Results from both
+    service types are merged and deduplicated.
+    """
     zeroconf = AsyncZeroconf()
-    background_tasks = set()
+    background_tasks: set[asyncio.Future[None]] = set()
+    seen: set[str] = set()
 
     table = Table(
         title="\n\nFound Peblar chargers", header_style="cyan bold", show_lines=True
@@ -1488,12 +1495,25 @@ async def scan(
     ) -> None:
         """Retrieve and display service info."""
         info = AsyncServiceInfo(service_type, name)
-        await info.async_request(zeroconf, 3000)
-        if info is None:
+        if not await info.async_request(zeroconf, 3000) or not info.server:
             return
 
-        if info.properties is None or not str(info.server).startswith("PBLR-"):
+        # _pblr._tcp is Peblar-specific (firmware 1.8+), no extra filtering.
+        # _http._tcp is generic; only accept chargers with PBLR- hostnames.
+        is_pblr_service = service_type == "_pblr._tcp.local."
+        if not is_pblr_service and not str(info.server).startswith("PBLR-"):
             return
+
+        # Deduplicate by hostname, which is the one constant across both
+        # _pblr._tcp and _http._tcp for the same charger.
+        hostname = str(info.server).rstrip(".")
+        if hostname in seen:
+            return
+        seen.add(hostname)
+
+        props = info.properties or {}
+        serial = props[b"sn"].decode() if b"sn" in props else ""  # ty: ignore[unresolved-attribute]
+        version = props[b"version"].decode() if b"version" in props else ""  # ty: ignore[unresolved-attribute]
 
         if not quiet:
             console.print(
@@ -1501,10 +1521,9 @@ async def scan(
             )
 
         table.add_row(
-            f"{str(info.server).rstrip('.')}\n"
-            + ", ".join(info.parsed_scoped_addresses()),
-            info.properties[b"sn"].decode(),  # ty: ignore[unresolved-attribute]
-            info.properties[b"version"].decode(),  # ty: ignore[unresolved-attribute]
+            f"{hostname}\n" + ", ".join(info.parsed_scoped_addresses()),
+            serial or "N/A",
+            version or "N/A",
         )
 
     if not quiet:
@@ -1514,7 +1533,7 @@ async def scan(
     with Live(table, console=console, refresh_per_second=4):
         browser = AsyncServiceBrowser(
             zeroconf.zeroconf,
-            "_http._tcp.local.",
+            ["_pblr._tcp.local.", "_http._tcp.local."],
             handlers=[async_on_service_state_change],
         )
 
@@ -1527,6 +1546,7 @@ async def scan(
             if not quiet:
                 console.print("\n[green]Control-C pressed, stopping scan")
             await browser.async_cancel()
+            await asyncio.gather(*background_tasks, return_exceptions=True)
             await zeroconf.async_close()
 
 
