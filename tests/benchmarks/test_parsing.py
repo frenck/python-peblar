@@ -32,7 +32,9 @@ METER_PAYLOAD = load_fixture("meter.json")
 @pytest.mark.benchmark
 def test_parse_user_configuration() -> None:
     """Benchmark user configuration parsing (biggest model, pre/post hooks)."""
-    from peblar.models import PeblarUserConfiguration  # noqa: PLC0415
+    from peblar.models import (
+        PeblarUserConfiguration,  # pylint: disable=import-outside-toplevel
+    )
 
     PeblarUserConfiguration.from_json(USER_CONFIGURATION_PAYLOAD)
 
@@ -40,7 +42,9 @@ def test_parse_user_configuration() -> None:
 @pytest.mark.benchmark
 def test_parse_system_information() -> None:
     """Benchmark system information parsing (startup path)."""
-    from peblar.models import PeblarSystemInformation  # noqa: PLC0415
+    from peblar.models import (
+        PeblarSystemInformation,  # pylint: disable=import-outside-toplevel
+    )
 
     PeblarSystemInformation.from_json(SYSTEM_INFORMATION_PAYLOAD)
 
@@ -48,7 +52,7 @@ def test_parse_system_information() -> None:
 @pytest.mark.benchmark
 def test_parse_system() -> None:
     """Benchmark Local REST API /system parsing (per-scan path)."""
-    from peblar.models import PeblarSystem  # noqa: PLC0415
+    from peblar.models import PeblarSystem  # pylint: disable=import-outside-toplevel
 
     PeblarSystem.from_json(SYSTEM_PAYLOAD)
 
@@ -56,6 +60,6 @@ def test_parse_system() -> None:
 @pytest.mark.benchmark
 def test_parse_meter() -> None:
     """Benchmark Local REST API /meter parsing (per-scan path)."""
-    from peblar.models import PeblarMeter  # noqa: PLC0415
+    from peblar.models import PeblarMeter  # pylint: disable=import-outside-toplevel
 
     PeblarMeter.from_json(METER_PAYLOAD)

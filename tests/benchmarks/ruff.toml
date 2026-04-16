@@ -1,0 +1,6 @@
+# Extend the test rules for benchmarks
+extend = "../ruff.toml"
+
+lint.extend-ignore = [
+  "PLC0415", # Imports deferred to avoid CodSpeed + mashumaro segfault
+]
