@@ -21,6 +21,7 @@ from yarl import URL
 from .const import LedBrightness, LedIntensityMode, SoundVolume
 from .exceptions import (
     PeblarAuthenticationError,
+    PeblarBadRequestError,
     PeblarConnectionError,
     PeblarConnectionTimeoutError,
     PeblarError,
@@ -36,6 +37,7 @@ from .models import (
     PeblarLocalRestApiAccess,
     PeblarLogin,
     PeblarMeter,
+    PeblarMeterHistory,
     PeblarModbusApiAccess,
     PeblarReboot,
     PeblarRfidToken,
@@ -112,6 +114,13 @@ class Peblar:
                     headers={"Content-Type": "application/json"},
                     data=data.to_json() if data else None,
                 )
+                if response.status == 400:
+                    body = await response.text()
+                    try:
+                        msg = orjson.loads(body) if body else "Bad request"
+                    except orjson.JSONDecodeError:
+                        msg = body or "Bad request"
+                    raise PeblarBadRequestError(msg)
                 response.raise_for_status()
         except TimeoutError as exception:
             msg = "Timeout occurred while connecting to the Peblar charger"
@@ -283,6 +292,32 @@ class Peblar:
         data: _RfidTokenListEnvelope = orjson.loads(result)
         return [PeblarRfidToken.from_dict(item) for item in data["Tokens"]]
 
+    async def meter_history(
+        self,
+        *,
+        start: str | None = None,
+        stop: str | None = None,
+    ) -> PeblarMeterHistory:
+        """Get meter history in the requested time range."""
+        url = URL("statistics/meterhistory")
+        query: dict[str, str] = {}
+        if start:
+            query["StartTime"] = start
+        if stop:
+            query["StopTime"] = stop
+        if query:
+            url = url.with_query(query)
+
+        result = await self.request(url)
+        raw: dict[str, object] = orjson.loads(result)
+        if raw.get("NoSessions") is True:
+            return PeblarMeterHistory(
+                corrupted=False,
+                corrupted_session=[],
+                session=[],
+            )
+        return PeblarMeterHistory.from_json(result)
+
     async def add_rfid_token(
         self,
         *,
@@ -436,6 +471,13 @@ class PeblarApi:
                     },
                     data=data.to_json() if data else None,
                 )
+                if response.status == 400:
+                    body = await response.text()
+                    try:
+                        msg = orjson.loads(body) if body else "Bad request"
+                    except orjson.JSONDecodeError:
+                        msg = body or "Bad request"
+                    raise PeblarBadRequestError(msg)
                 response.raise_for_status()
         except TimeoutError as exception:
             msg = "Timeout occurred while connecting to the Peblar charger API"
