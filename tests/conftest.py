@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
@@ -15,10 +16,11 @@ if TYPE_CHECKING:
 
 
 AIOHTTP_REQUIRES_STREAM_WRITER = (
-    "stream_writer" in aiohttp.ClientResponse.__init__.__code__.co_varnames
+    "stream_writer" in inspect.signature(aiohttp.ClientResponse.__init__).parameters
 )
 
-AIOHTTP_STREAM_WRITER = SimpleNamespace(output_size=0)
+# aiohttp 3.14+ expects a stream_writer object exposing an `output_size` attribute.
+DEFAULT_STREAM_WRITER = SimpleNamespace(output_size=0)
 
 
 class AioresponsesClientResponse(aioresponses_core.ClientResponse):
@@ -26,7 +28,8 @@ class AioresponsesClientResponse(aioresponses_core.ClientResponse):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize and provide a stream_writer for aiohttp 3.14+."""
-        kwargs.setdefault("stream_writer", AIOHTTP_STREAM_WRITER)
+        if AIOHTTP_REQUIRES_STREAM_WRITER:
+            kwargs.setdefault("stream_writer", DEFAULT_STREAM_WRITER)
         super().__init__(*args, **kwargs)
 
 
@@ -37,10 +40,13 @@ def _setup_aioresponses_aiohttp_compat() -> Generator[None, None, None]:
         yield
         return
 
-    monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(aioresponses_core, "ClientResponse", AioresponsesClientResponse)
-    yield
-    monkeypatch.undo()
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            aioresponses_core,
+            "ClientResponse",
+            AioresponsesClientResponse,
+        )
+        yield
 
 
 @pytest.fixture(autouse=True)
