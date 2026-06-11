@@ -44,7 +44,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cli = ["rich>=13.0.0", "typer>=0.15.1", "zeroconf>=0.149.7"]
+cli = ["rich>=13.0.0", "typer>=0.15.1", "zeroconf>=0.149.12"]
 
 [project.scripts]
 peblar = "peblar.cli:cli"
