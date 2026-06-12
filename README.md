@@ -8,6 +8,7 @@
 
 [![Build Status][build-shield]][build]
 [![Code Coverage][codecov-shield]][codecov]
+[![CodSpeed][codspeed-shield]][codspeed]
 [![OpenSSF Scorecard][scorecard-shield]][scorecard]
 [![Open in Dev Containers][devcontainer-shield]][devcontainer]
 
@@ -183,6 +184,8 @@ SOFTWARE.
 [build]: https://github.com/frenck/python-peblar/actions/workflows/tests.yaml
 [codecov-shield]: https://codecov.io/gh/frenck/python-peblar/branch/main/graph/badge.svg
 [codecov]: https://codecov.io/gh/frenck/python-peblar
+[codspeed-shield]: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+[codspeed]: https://app.codspeed.io/frenck/python-peblar?utm_source=badge
 [contributors]: https://github.com/frenck/python-peblar/graphs/contributors
 [devcontainer-shield]: https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode
 [devcontainer]: https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/frenck/python-peblar
