@@ -172,10 +172,10 @@ class CPState(StrEnum):
     FAULT = "State F"
     """Fault state; Charger is not operational."""
 
-    INVALID = "Invalid"
+    INVALID = "State Invalid"
     """Invalid CP measured."""
 
-    UNKNOWN = "Unknown"
+    UNKNOWN = "unknown state"
     """CP signal cannot be measured."""
 
 
