@@ -99,6 +99,15 @@
       'password',
       'quiet',
     ]),
+    'meterhistory': list([
+      'export',
+      'filename',
+      'host',
+      'password',
+      'quiet',
+      'start',
+      'stop',
+    ]),
     'modbus': list([
       'disable',
       'enable',

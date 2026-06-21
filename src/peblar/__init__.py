@@ -12,6 +12,7 @@ from .const import (
 )
 from .exceptions import (
     PeblarAuthenticationError,
+    PeblarBadRequestError,
     PeblarConnectionError,
     PeblarConnectionTimeoutError,
     PeblarError,
@@ -39,6 +40,7 @@ __all__ = [
     "Peblar",
     "PeblarApi",
     "PeblarAuthenticationError",
+    "PeblarBadRequestError",
     "PeblarConnectionError",
     "PeblarConnectionTimeoutError",
     "PeblarEVInterface",
