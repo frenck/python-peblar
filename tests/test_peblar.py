@@ -10,6 +10,7 @@ from aioresponses import aioresponses
 from peblar import Peblar
 from peblar.const import (
     AccessMode,
+    CPState,
     LedBrightness,
     PackageType,
     SmartChargingMode,
@@ -474,6 +475,16 @@ async def test_api_ev_interface_lock_state_absent() -> None:
         async with PeblarApi(host=HOST, token="t") as api:
             ev = await api.ev_interface()
     assert ev.lock_state is None
+
+
+async def test_api_ev_interface_cp_state_invalid() -> None:
+    """Test CPState invalid is parsed from a socket charger response."""
+    body = patched_fixture("ev_interface_cpstate_invalid.json")
+    with aioresponses() as mocked:
+        mocked.get(API_EV_URL, status=200, body=body)
+        async with PeblarApi(host=HOST, token="t") as api:
+            ev = await api.ev_interface()
+    assert ev.cp_state == CPState.INVALID
 
 
 async def test_api_401_authentication_error() -> None:
