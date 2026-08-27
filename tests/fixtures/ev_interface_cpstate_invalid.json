@@ -1,0 +1,8 @@
+{
+  "ChargeCurrentLimit" : 0,
+  "ChargeCurrentLimitActual" : 0,
+  "ChargeCurrentLimitSource" : "Local REST API",
+  "CpState" : "State Invalid",
+  "Force1Phase" : false,
+  "LockState" : true
+}

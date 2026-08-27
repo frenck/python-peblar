@@ -158,24 +158,24 @@ class CPState(StrEnum):
     """No EV connected."""
 
     CHARGING_SUSPENDED = "State B"
-    """EV connected, byt charging suspended by EV or charger."""
+    """EV connected, but charging suspended by either EV or charger."""
 
     CHARGING = "State C"
     """EV connected and charging."""
 
     CHARGING_VENTILATION = "State D"
-    """EV connected and charging, but ventilation requested (unused)."""
+    """EV connected and charging, but ventilation requested (not supported)."""
 
     ERROR = "State E"
-    """Error state; Short or powered off."""
+    """Error, short to PE or powered off."""
 
     FAULT = "State F"
-    """Fault state; Charger is not operational."""
+    """Fault detected by charger."""
 
-    INVALID = "Invalid"
-    """Invalid CP measured."""
+    INVALID = "State Invalid"
+    """Invalid CP level measured."""
 
-    UNKNOWN = "Unknown"
+    UNKNOWN = "unknown state"
     """CP signal cannot be measured."""
 
 
