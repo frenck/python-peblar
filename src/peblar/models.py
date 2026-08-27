@@ -572,6 +572,58 @@ class PeblarSystem(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarMeterHistoryMetaData(BaseModel):
+    """Meter history metadata."""
+
+    meter_hash: str = field(metadata=field_options(alias="MeterHash"))
+    meter_version: str = field(metadata=field_options(alias="MeterVersion"))
+    mid_certified: bool = field(metadata=field_options(alias="MidCertified"))
+    product_pn: str = field(metadata=field_options(alias="ProductPn"))
+    product_sn: str = field(metadata=field_options(alias="ProductSn"))
+    time_zone: str = field(metadata=field_options(alias="TimeZone"))
+
+
+@dataclass(kw_only=True)
+class PeblarMeterHistorySession(BaseModel):
+    """Single meter history session entry."""
+
+    auth_token: str | None = field(
+        default=None,
+        metadata=field_options(alias="AuthToken"),
+    )
+    checksum: int = field(metadata=field_options(alias="Checksum"))
+    session_number: int = field(metadata=field_options(alias="SessionNumber"))
+    session_start_energy_mwh: int = field(
+        metadata=field_options(alias="SessionStartEnergymWh")
+    )
+    session_start_time: int = field(metadata=field_options(alias="SessionStartTime"))
+    session_end_energy_mwh: int | None = field(
+        default=None,
+        metadata=field_options(alias="SessionEndEnergymWh"),
+    )
+    session_end_time: int | None = field(
+        default=None,
+        metadata=field_options(alias="SessionEndTime"),
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarMeterHistory(BaseModel):
+    """Meter history response."""
+
+    corrupted: bool = field(metadata=field_options(alias="Corrupted"))
+    corrupted_session: list[bool] = field(
+        metadata=field_options(alias="CorruptedSession")
+    )
+    meta_data: PeblarMeterHistoryMetaData | None = field(
+        default=None, metadata=field_options(alias="MetaData")
+    )
+    session: list[PeblarMeterHistorySession] = field(
+        metadata=field_options(alias="Session")
+    )
+
+
+@dataclass(kw_only=True)
 class PeblarEVInterface(BaseModel):
     """Object holding the EV interface information of the Peblar charger."""
 
