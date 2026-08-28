@@ -189,7 +189,9 @@ async def meterhistory_fetch_data(
             stop=normalized_stop,
         )
     except PeblarBadRequestError as exc:
-        console.print(f"❌[red]{exc}")
+        # markup=False: the message carries the charger's own text, and Rich
+        # would silently eat any part of it that looks like a tag.
+        console.print(f"❌ {exc}", style="red", markup=False)
         raise typer.Exit(code=1) from exc
     tokens = await peblar.rfid_tokens()
     return normalized_start, normalized_stop, history, tokens
