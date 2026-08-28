@@ -547,3 +547,36 @@ async def test_disconnect_clears_in_flight_bookkeeping(
     # Reconnecting and asking for the same topic again is fine.
     await websocket.connect()
     await websocket.subscribe_session_status(lambda _: None)
+
+
+async def test_disconnect_ends_listen_cleanly(websocket: PeblarWebsocket) -> None:
+    """Test asking for a shutdown is not reported as a failure.
+
+    A caller awaiting listen() in its own task was never cancelled, so
+    handing it a CancelledError because someone else called disconnect()
+    would make it look like it was.
+    """
+    await websocket.connect()
+    listener = asyncio.create_task(websocket.listen())
+    await asyncio.sleep(0.05)
+
+    await websocket.disconnect()
+    await listener  # returns, does not raise
+
+    assert websocket.connected is False
+
+
+async def test_cancelling_listen_still_cancels_the_caller(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test a cancellation aimed at listen() is still delivered."""
+    await websocket.connect()
+    listener = asyncio.create_task(websocket.listen())
+    await asyncio.sleep(0.05)
+
+    listener.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await listener
+
+    # The connection is untouched, listening is only observing.
+    assert websocket.connected is True

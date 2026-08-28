@@ -150,13 +150,23 @@ class PeblarWebsocket:
 
         Listening is observing, not owning: cancelling this leaves the
         connection up and events still flowing to their callbacks. Call
-        disconnect() to actually tear it down.
+        disconnect() to actually tear it down, which returns from here
+        normally, since asking for a shutdown is not a failure.
         """
-        if self._reader is None:
+        reader = self._reader
+        if reader is None:
             msg = "Not connected to the Peblar charger websocket"
             raise PeblarError(msg)
 
-        await asyncio.shield(self._reader)
+        try:
+            await asyncio.shield(reader)
+        except asyncio.CancelledError:
+            # disconnect() cancels the reader. Only a cancellation aimed
+            # at this call is worth re-raising: handing back a
+            # CancelledError nobody asked for would make a caller that
+            # was never cancelled look like it was.
+            if not reader.cancelled():
+                raise
 
     async def disconnect(self) -> None:
         """Close the websocket connection."""
