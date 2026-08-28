@@ -17,7 +17,11 @@ from .exceptions import (
     PeblarConnectionTimeoutError,
     PeblarError,
 )
-from .models import PeblarSessionStatus, PeblarTokenFound
+from .models import (
+    PeblarFirmwareUpdateStatus,
+    PeblarSessionStatus,
+    PeblarTokenFound,
+)
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession, ClientWebSocketResponse
@@ -123,6 +127,21 @@ class PeblarWebsocket:
         await self.subscribe(
             session_status_topic(connector),
             lambda data: callback(PeblarSessionStatus.from_dict(data)),
+        )
+
+    async def subscribe_firmware_update_status(
+        self,
+        callback: Callable[[PeblarFirmwareUpdateStatus], None],
+    ) -> None:
+        """Subscribe to the progress of a running firmware update.
+
+        Subscribe before triggering the update, otherwise you miss the
+        early steps. The charger also replays the result of the previous
+        update on subscribe.
+        """
+        await self.subscribe(
+            WebsocketTopic.FIRMWARE_UPDATE_STATUS,
+            lambda data: callback(PeblarFirmwareUpdateStatus.from_dict(data)),
         )
 
     async def subscribe_token_found(

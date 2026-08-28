@@ -139,6 +139,9 @@ class WebsocketTopic(StrEnum):
     PeblarWebsocket.subscribe_session_status().
     """
 
+    FIRMWARE_UPDATE_STATUS = "/system/fwupdate/status"
+    """Progress of a running firmware update."""
+
     RFID_TOKEN_FOUND = "/rfid/tokenfound"  # noqa: S105
     """An RFID token was held against the reader."""
 
@@ -246,3 +249,9 @@ class PackageType(StrEnum):
 
     CUSTOMIZATION = "Customization"
     """Customization package."""
+
+
+# Order the charger expects its packages to be updated in. The web
+# interface always sends Customization first, then Firmware, waiting for
+# the charger to reboot in between.
+PACKAGE_UPDATE_ORDER = (PackageType.CUSTOMIZATION, PackageType.FIRMWARE)

@@ -12,6 +12,7 @@ from yarl import URL
 
 from peblar import Peblar
 from peblar.const import (
+    PACKAGE_UPDATE_ORDER,
     AccessMode,
     ChargeLimiter,
     CPState,
@@ -59,6 +60,8 @@ CURRENT_VERSIONS_URL = BASE_URL + "system/software/automatic-update/current-vers
 AVAILABLE_VERSIONS_URL = (
     BASE_URL + "system/software/automatic-update/available-versions"
 )
+AVAILABLE_VERSIONS_CACHED_URL = AVAILABLE_VERSIONS_URL + "?UseCache=true"
+AVAILABLE_VERSIONS_FRESH_URL = AVAILABLE_VERSIONS_URL + "?UseCache=false"
 API_TOKEN_URL = BASE_URL + "config/api-token"
 REBOOT_URL = BASE_URL + "system/reboot"
 UPDATE_URL = BASE_URL + "system/software/automatic-update/update"
@@ -350,7 +353,7 @@ async def test_available_versions() -> None:
     """Test available_versions parses the versions payload."""
     with aioresponses() as mocked:
         mocked.get(
-            AVAILABLE_VERSIONS_URL,
+            AVAILABLE_VERSIONS_CACHED_URL,
             status=200,
             body=load_fixture("versions_available.json"),
         )
@@ -1865,3 +1868,28 @@ async def test_websocket_shares_the_logged_in_session() -> None:
             websocket = peblar.websocket()
     assert websocket.session is peblar.session
     assert websocket.url == URL(f"ws://{HOST}/api/v1/ws")
+
+
+async def test_available_versions_uncached() -> None:
+    """Test asking the charger to go and re-check for updates.
+
+    The charger serves a cached answer by default, which is not what you
+    want while waiting for an update to appear.
+    """
+    with aioresponses() as mocked:
+        mocked.get(
+            AVAILABLE_VERSIONS_FRESH_URL,
+            status=200,
+            body=load_fixture("versions_available.json"),
+        )
+        async with Peblar(host=HOST) as peblar:
+            versions = await peblar.available_versions(use_cache=False)
+    assert versions.firmware is not None
+
+
+def test_package_update_order() -> None:
+    """Test the documented order the charger expects its packages in."""
+    assert [package.value for package in PACKAGE_UPDATE_ORDER] == [
+        "Customization",
+        "Firmware",
+    ]

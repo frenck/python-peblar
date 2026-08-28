@@ -2,6 +2,7 @@
 
 from .const import (
     MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API,
+    PACKAGE_UPDATE_ORDER,
     AccessMode,
     AuthorizationMethod,
     ChargeLimiter,
@@ -30,6 +31,7 @@ from .models import (
     PeblarEnergyHistoryMonth,
     PeblarEnergyHistoryYear,
     PeblarEVInterface,
+    PeblarFirmwareUpdateStatus,
     PeblarHealth,
     PeblarMeter,
     PeblarRfidToken,
@@ -52,6 +54,7 @@ from .websocket import PeblarWebsocket, session_status_topic
 
 __all__ = [
     "MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API",
+    "PACKAGE_UPDATE_ORDER",
     "AccessMode",
     "AuthorizationMethod",
     "CPState",
@@ -71,6 +74,7 @@ __all__ = [
     "PeblarEnergyHistoryMonth",
     "PeblarEnergyHistoryYear",
     "PeblarError",
+    "PeblarFirmwareUpdateStatus",
     "PeblarHealth",
     "PeblarMeter",
     "PeblarResponseError",
