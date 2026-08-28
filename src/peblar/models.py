@@ -86,10 +86,11 @@ def resolve_led_brightness(
     means the same thing as the member itself, and an intensity the UI
     has no name for raises rather than reaching the charger.
     """
-    if LedBrightness(brightness) is LedBrightness.AUTOMATIC:
+    level = LedBrightness(brightness)
+    if level is LedBrightness.AUTOMATIC:
         return LedIntensityMode.AUTO, None
 
-    return LedIntensityMode.FIXED, LedBrightness(brightness).value
+    return LedIntensityMode.FIXED, level.value
 
 
 class BaseModel(DataClassORJSONMixin):
