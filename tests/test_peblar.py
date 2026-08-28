@@ -1099,3 +1099,111 @@ async def test_undecodable_success_body_is_replaced_not_raised() -> None:
 
     assert system.phase_count == 3
     assert system.firmware_version.startswith("1.9.2")
+
+
+# ---------------------------------------------------------------------------
+# Fields reported by newer firmware
+# ---------------------------------------------------------------------------
+def test_system_information_newer_firmware_fields() -> None:
+    """Test hardware traits reported by newer firmware are picked up."""
+    info = PeblarSystemInformation.from_json(
+        load_fixture("system_information.json"),
+    )
+    assert info.hardware_has_four_pole_relay is False
+    assert info.hardware_has_dual_socket is False
+    assert info.hardware_has_shutter is False
+    assert info.hardware_uk_compliant is False
+    assert info.nor_flash is True
+
+
+def test_user_configuration_newer_firmware_fields() -> None:
+    """Test settings reported by newer firmware are picked up."""
+    config = PeblarUserConfiguration.from_json(
+        load_fixture("user_configuration.json"),
+    )
+    assert config.connect_hub_visibility is True
+    assert config.custom_customer_id == ""
+    assert config.iso15118_communication_enabled is False
+    assert config.sbo_allowed is True
+    assert config.sbo_enabled == "Enabled"
+    assert config.session_download_allowed is True
+    assert config.user_defined_household_power_limit_source_parameters == {}
+
+
+def test_system_information_older_firmware_omits_new_fields() -> None:
+    """Test firmware that does not report the new traits still parses."""
+    data = orjson.loads(load_fixture("system_information.json"))
+    for key in (
+        "HwHas4pRelay",
+        "HwHasDualSocket",
+        "HwHasShutter",
+        "HwUKCompliant",
+        "NorFlash",
+    ):
+        del data[key]
+
+    info = PeblarSystemInformation.from_dict(data)
+    assert info.hardware_has_four_pole_relay is None
+    assert info.hardware_has_dual_socket is None
+    assert info.hardware_has_shutter is None
+    assert info.hardware_uk_compliant is None
+    assert info.nor_flash is None
+
+
+def test_user_configuration_older_firmware_omits_new_fields() -> None:
+    """Test firmware that does not report the new settings still parses."""
+    data = orjson.loads(load_fixture("user_configuration.json"))
+    for key in (
+        "ConnectHubVisibility",
+        "CustomCustomerId",
+        "Iso15118CommunicationEnable",
+        "SboAllowed",
+        "SboEnabled",
+        "SessionDownloadAllowed",
+        "UserDefinedHouseholdPowerLimitSourceParameters",
+    ):
+        del data[key]
+
+    config = PeblarUserConfiguration.from_dict(data)
+    assert config.connect_hub_visibility is None
+    assert config.custom_customer_id is None
+    assert config.iso15118_communication_enabled is None
+    assert config.sbo_allowed is None
+    assert config.sbo_enabled is None
+    assert config.session_download_allowed is None
+    assert config.user_defined_household_power_limit_source_parameters == {}
+
+
+def test_household_power_limit_source_parameters_are_decoded() -> None:
+    """Test the household limit parameter blob is unpacked like the others."""
+    config = PeblarUserConfiguration.from_json(
+        patched_fixture(
+            "user_configuration.json",
+            UserDefinedHouseholdPowerLimitSourceParameters='{"address": "meter-1"}',
+        ),
+    )
+    assert config.user_defined_household_power_limit_source_parameters == {
+        "address": "meter-1"
+    }
+
+
+@pytest.mark.parametrize(
+    ("blob", "expected"),
+    [
+        ('{"address": "meter-1"}', {"address": "meter-1"}),
+        ({"address": "meter-1"}, {"address": "meter-1"}),
+        ("", {}),
+        (None, {}),
+    ],
+    ids=["encoded", "already-decoded", "empty-string", "null"],
+)
+def test_parameter_blob_shapes(blob: object, expected: dict[str, str]) -> None:
+    """Test the parameter blobs survive every shape the charger sends.
+
+    An already decoded mapping has to pass through untouched, so handing a
+    previously parsed payload back in does not fail on a second decode.
+    """
+    data = orjson.loads(load_fixture("user_configuration.json"))
+    data["BopSourceParameters"] = blob
+    config = PeblarUserConfiguration.from_dict(data)
+    assert config.bop_source_parameters == expected

@@ -215,8 +215,14 @@ class PeblarSystemInformation(BaseModel):
     hardware_firmware_compatibility: str = field(
         metadata=field_options(alias="HwFwCompat")
     )
+    hardware_has_four_pole_relay: bool | None = field(
+        default=None, metadata=field_options(alias="HwHas4pRelay")
+    )
     hardware_has_bop: bool = field(metadata=field_options(alias="HwHasBop"))
     hardware_has_buzzer: bool = field(metadata=field_options(alias="HwHasBuzzer"))
+    hardware_has_dual_socket: bool | None = field(
+        default=None, metadata=field_options(alias="HwHasDualSocket")
+    )
     hardware_has_eichrecht_laser_marking: bool = field(
         metadata=field_options(alias="HwHasEichrechtLaserMarking")
     )
@@ -230,12 +236,18 @@ class PeblarSystemInformation(BaseModel):
     hardware_has_plc: bool = field(metadata=field_options(alias="HwHasPlc"))
     hardware_has_rfid: bool = field(metadata=field_options(alias="HwHasRfid"))
     hardware_has_rs485: bool = field(metadata=field_options(alias="HwHasRs485"))
+    hardware_has_shutter: bool | None = field(
+        default=None, metadata=field_options(alias="HwHasShutter")
+    )
     hardware_has_socket: bool = field(metadata=field_options(alias="HwHasSocket"))
     hardware_has_tpm: bool = field(metadata=field_options(alias="HwHasTpm"))
     hardware_has_wlan: bool = field(metadata=field_options(alias="HwHasWlan"))
     hardware_max_current: int = field(metadata=field_options(alias="HwMaxCurrent"))
     hardware_one_or_three_phase: int = field(
         metadata=field_options(alias="HwOneOrThreePhase")
+    )
+    hardware_uk_compliant: bool | None = field(
+        default=None, metadata=field_options(alias="HwUKCompliant")
     )
     mainboard_part_number: str = field(metadata=field_options(alias="MainboardPn"))
     mainboard_serial_number: str = field(metadata=field_options(alias="MainboardSn"))
@@ -276,6 +288,9 @@ class PeblarSystemInformation(BaseModel):
         metadata=field_options(alias="MeterCalVGainC")
     )
     meter_firmware_version: str = field(metadata=field_options(alias="MeterFwIdent"))
+    nor_flash: bool | None = field(
+        default=None, metadata=field_options(alias="NorFlash")
+    )
     product_model_name: str = field(metadata=field_options(alias="ProductModelName"))
     product_number: str = field(metadata=field_options(alias="ProductPn"))
     product_serial_number: str = field(metadata=field_options(alias="ProductSn"))
@@ -299,6 +314,9 @@ class PeblarUserConfiguration(BaseModel):
     bop_source_parameters: dict[str, Any] = field(
         metadata=field_options(alias="BopSourceParameters")
     )
+    connect_hub_visibility: bool | None = field(
+        default=None, metadata=field_options(alias="ConnectHubVisibility")
+    )
     connected_phases: int = field(metadata=field_options(alias="ConnectedPhases"))
     current_control_bop_ct_type: str = field(
         metadata=field_options(alias="CurrentCtrlBopCtType")
@@ -311,6 +329,9 @@ class PeblarUserConfiguration(BaseModel):
     )
     current_control_fixed_charge_current_limit: int = field(
         metadata=field_options(alias="CurrentCtrlFixedChargeCurrentLimit")
+    )
+    custom_customer_id: str | None = field(
+        default=None, metadata=field_options(alias="CustomCustomerId")
     )
     ground_monitoring: bool = field(metadata=field_options(alias="GroundMonitoring"))
     group_load_balancing_enabled: bool = field(
@@ -339,6 +360,9 @@ class PeblarUserConfiguration(BaseModel):
     led_intensity_min: int = field(metadata=field_options(alias="HmiLedIntensityMin"))
     led_intensity_mode: LedIntensityMode = field(
         metadata=field_options(alias="HmiLedIntensityMode")
+    )
+    iso15118_communication_enabled: bool | None = field(
+        default=None, metadata=field_options(alias="Iso15118CommunicationEnable")
     )
     local_rest_api_access_mode: AccessMode = field(
         metadata=field_options(alias="LocalRestApiAccessMode")
@@ -378,6 +402,12 @@ class PeblarUserConfiguration(BaseModel):
         metadata=field_options(alias="PowerLimitInputEnable")
     )
     predefined_cpo_name: str = field(metadata=field_options(alias="PredefinedCpoName"))
+    sbo_allowed: bool | None = field(
+        default=None, metadata=field_options(alias="SboAllowed")
+    )
+    sbo_enabled: str | None = field(
+        default=None, metadata=field_options(alias="SboEnabled")
+    )
     scheduled_charging_allowed: bool = field(
         metadata=field_options(alias="ScheduledChargingAllowed")
     )
@@ -386,6 +416,9 @@ class PeblarUserConfiguration(BaseModel):
     )
     secc_ocpp_active: bool = field(metadata=field_options(alias="SeccOcppActive"))
     secc_ocpp_uri: str = field(metadata=field_options(alias="SeccOcppUri"))
+    session_download_allowed: bool | None = field(
+        default=None, metadata=field_options(alias="SessionDownloadAllowed")
+    )
     session_manager_charge_without_authentication: bool = field(
         metadata=field_options(alias="SessionManagerChargeWithoutAuth")
     )
@@ -423,6 +456,10 @@ class PeblarUserConfiguration(BaseModel):
     user_defined_household_power_limit_source: str = field(
         metadata=field_options(alias="UserDefinedHouseholdPowerLimitSource")
     )
+    user_defined_household_power_limit_source_parameters: dict[str, Any] = field(
+        default_factory=dict,
+        metadata=field_options(alias="UserDefinedHouseholdPowerLimitSourceParameters"),
+    )
     user_keep_socket_locked: bool = field(
         metadata=field_options(alias="UserKeepSocketLocked")
     )
@@ -443,10 +480,18 @@ class PeblarUserConfiguration(BaseModel):
     @classmethod
     def __pre_deserialize__(cls, d: dict[Any, Any]) -> dict[Any, Any]:
         """Pre deserialize hook for PeblarUserConfiguration object."""
-        d["SolarChargingSourceParameters"] = orjson.loads(
-            d.get("SolarChargingSourceParameters") or "{}"
-        )
-        d["BopSourceParameters"] = orjson.loads(d.get("BopSourceParameters") or "{}")
+        for key in (
+            "BopSourceParameters",
+            "SolarChargingSourceParameters",
+            "UserDefinedHouseholdPowerLimitSourceParameters",
+        ):
+            # The charger sends these JSON encoded, but tolerate a blob that
+            # is already a mapping so feeding back an earlier result does
+            # not blow up on a second decode.
+            blob = d.get(key)
+            if isinstance(blob, str) or blob is None:
+                blob = orjson.loads(blob or "{}")
+            d[key] = blob
         return d
 
     @classmethod
