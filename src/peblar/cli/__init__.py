@@ -67,6 +67,32 @@ def print_cli_success(*, quiet: bool, message: str) -> None:
     console.print(message)
 
 
+def format_amps(milliamps: int | None) -> str:
+    """Format a milliampere reading, or mark the phase as absent."""
+    if milliamps is None:
+        return "N/A (single phase charger)"
+    return f"{round(milliamps / 1000, 3)}A"
+
+
+def format_watts(watts: int | None) -> str:
+    """Format a wattage reading, or mark the phase as absent."""
+    if watts is None:
+        return "N/A (single phase charger)"
+    return f"{watts}W"
+
+
+def format_volts(volts: int | None) -> str:
+    """Format a voltage reading, or mark it as not reported.
+
+    The charger leaves a voltage out both for a phase it does not have
+    and for one it cannot currently measure, so this stays vaguer than
+    the current and power equivalents.
+    """
+    if volts is None:
+        return "N/A"
+    return f"{volts}V"
+
+
 def convert_to_string(value: object) -> str:
     """Convert a value to a string."""
     if isinstance(value, bool):
@@ -1857,30 +1883,21 @@ async def meter(
 
     table.add_row("Total power", f"{meter_data.power_total}W")
     table.add_row("Power phase 1", f"{meter_data.power_phase_1}W")
-    table.add_row("Power phase 2", f"{meter_data.power_phase_2}W")
-    table.add_row("Power phase 3", f"{meter_data.power_phase_3}W")
+    table.add_row("Power phase 2", format_watts(meter_data.power_phase_2))
+    table.add_row("Power phase 3", format_watts(meter_data.power_phase_3))
 
     table.add_section()
 
-    total_current = round(
-        (
-            meter_data.current_phase_1
-            + meter_data.current_phase_2
-            + meter_data.current_phase_3
-        )
-        / 1000,
-        3,
-    )
-    table.add_row("Total current", f"{total_current}A")
+    table.add_row("Total current", f"{round(meter_data.current_total / 1000, 3)}A")
     table.add_row("Current Phase 1", f"{round(meter_data.current_phase_1 / 1000, 3)}A")
-    table.add_row("Current Phase 2", f"{round(meter_data.current_phase_2 / 1000, 3)}A")
-    table.add_row("Current Phase 3", f"{round(meter_data.current_phase_3 / 1000, 3)}A")
+    table.add_row("Current Phase 2", format_amps(meter_data.current_phase_2))
+    table.add_row("Current Phase 3", format_amps(meter_data.current_phase_3))
 
     table.add_section()
 
-    table.add_row("Voltage Phase 1", f"{meter_data.voltage_phase_1 or 0}V")
-    table.add_row("Voltage Phase 2", f"{meter_data.voltage_phase_2 or 0}V")
-    table.add_row("Voltage Phase 3", f"{meter_data.voltage_phase_3 or 0}V")
+    table.add_row("Voltage Phase 1", format_volts(meter_data.voltage_phase_1))
+    table.add_row("Voltage Phase 2", format_volts(meter_data.voltage_phase_2))
+    table.add_row("Voltage Phase 3", format_volts(meter_data.voltage_phase_3))
 
     console.print(table)
 
