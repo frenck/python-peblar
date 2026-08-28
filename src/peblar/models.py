@@ -240,7 +240,7 @@ class PeblarChargeSessionAuthorization(BaseModel):
     def __post_init__(self) -> None:
         """Post init hook for PeblarChargeSessionAuthorization object."""
         if (self.token is None) == (self.name is None):
-            msg = "Provide either a token UID or a token name, but not both"
+            msg = "Provide exactly one of a token UID or a token name"
             raise ValueError(msg)
 
 

@@ -1586,7 +1586,7 @@ async def test_api_authorize_charge_session_needs_exactly_one(
 ) -> None:
     """Test the charge session payload insists on exactly one identifier."""
     async with PeblarApi(host=HOST, token="t") as api:
-        with pytest.raises(ValueError, match="not both"):
+        with pytest.raises(ValueError, match="exactly one"):
             await api.authorize_charge_session(token=token, name=name)
 
 

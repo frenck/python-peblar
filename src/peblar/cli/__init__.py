@@ -1913,7 +1913,7 @@ async def authorize(
     session and stops an authorized one.
     """
     if (uid is None) == (name is None):
-        msg = "Provide either --uid or --name, but not both."
+        msg = "Provide exactly one of --uid or --name."
         raise typer.BadParameter(msg)
 
     status_ctx = (

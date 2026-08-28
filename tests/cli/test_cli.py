@@ -488,7 +488,7 @@ def test_authorize_requires_exactly_one_identifier(
     mock_cls = _mock_peblar_with_api({"authorize_charge_session": None}, login=None)
     exit_code, output = _invoke(runner, ["authorize", *_AUTH, *args], mock_cls)
     assert exit_code != 0
-    assert "not both" in output
+    assert "exactly one" in output
 
 
 def test_unsupported_firmware_handler_shows_the_versions(
