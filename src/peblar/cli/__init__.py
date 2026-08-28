@@ -2551,8 +2551,15 @@ def _anonymize(data: dict[str, object]) -> dict[str, object]:
     result: dict[str, object] = {}
 
     for key, original in data.items():
-        if key == "Tokens" and isinstance(original, list):
-            result[key] = _anonymize_tokens(original)
+        if key == "Tokens":
+            # Anything that is not a list of tokens cannot be scrubbed
+            # field by field, and this is a privacy boundary rather than
+            # a best effort, so it does not get the benefit of the doubt.
+            result[key] = (
+                _anonymize_tokens(original)
+                if isinstance(original, list)
+                else "<redacted>"
+            )
         elif key in _REDACT_MAP:
             result[key] = _REDACT_MAP[key]
         elif key in _MAC_KEYS:

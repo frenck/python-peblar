@@ -16,6 +16,7 @@ from peblar.cli import _anonymize, cli, convert_to_string
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
+    PeblarError,
     PeblarRateLimitError,
     PeblarUnsupportedFirmwareVersionError,
 )
@@ -33,6 +34,8 @@ from peblar.models import (
 from tests import load_fixture
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from syrupy.assertion import SnapshotAssertion
 
 
@@ -621,3 +624,104 @@ def test_anonymize_tokens_redacts_anything_that_is_not_a_token() -> None:
     and a dump is the wrong place to gamble on that.
     """
     assert _anonymize({"Tokens": ["0123456789ABCD"]}) == {"Tokens": ["<redacted>"]}
+
+
+# ---------------------------------------------------------------------------
+# Dump command
+# ---------------------------------------------------------------------------
+
+_DUMP_RESPONSES = {
+    "system/info": "system_information.json",
+    "config/user": "user_configuration.json",
+    "system/software/automatic-update/current-versions": "versions_current.json",
+    "system/software/automatic-update/available-versions": "versions_available.json",
+    "config/api-token": "api_token.json",
+    "config/auth/standalonelist": "standalonelist.json",
+}
+
+
+def _mock_peblar_for_dump(rest_api_error: Exception | None = None) -> MagicMock:
+    """Mock a Peblar whose raw request() serves the web API fixtures."""
+
+    async def fake_request(uri: object, **_kwargs: object) -> str:
+        return load_fixture(_DUMP_RESPONSES[str(uri)])
+
+    client = AsyncMock()
+    client.login.return_value = None
+    client.request.side_effect = fake_request
+    client.rest_api.side_effect = rest_api_error or PeblarError("not enabled")
+
+    instance = AsyncMock()
+    instance.__aenter__.return_value = client
+    instance.__aexit__.return_value = None
+    return MagicMock(return_value=instance)
+
+
+def test_dump_writes_an_anonymized_standalone_list(
+    runner: CliRunner,
+    tmp_path: Path,
+) -> None:
+    """Dump captures the auth list with the card identifiers scrubbed.
+
+    The whole point of the command is producing something safe to paste
+    into a bug report, so the real UIDs must not reach the file.
+    """
+    mock_cls = _mock_peblar_for_dump()
+    exit_code, _ = _invoke(
+        runner, ["dump", *_AUTH, "--output", str(tmp_path)], mock_cls
+    )
+    assert exit_code == 0
+
+    written = tmp_path / "standalonelist.json"
+    assert written.exists()
+
+    dumped = orjson.loads(written.read_bytes())
+    assert dumped == {
+        "Tokens": [
+            {"RfidTokenUid": "00000000000001", "RfidTokenDescription": "RFID card 1"},
+            {"RfidTokenUid": "00000000000002", "RfidTokenDescription": "RFID card 2"},
+        ]
+    }
+
+    original = orjson.loads(load_fixture("standalonelist.json"))
+    raw = written.read_text()
+    assert all(token["RfidTokenUid"] not in raw for token in original["Tokens"])
+
+
+def test_dump_raw_keeps_the_real_tokens(runner: CliRunner, tmp_path: Path) -> None:
+    """The --raw escape hatch still writes what the charger actually sent."""
+    mock_cls = _mock_peblar_for_dump()
+    exit_code, _ = _invoke(
+        runner, ["dump", *_AUTH, "--output", str(tmp_path), "--raw"], mock_cls
+    )
+    assert exit_code == 0
+
+    dumped = orjson.loads((tmp_path / "standalonelist.json").read_bytes())
+    assert dumped == orjson.loads(load_fixture("standalonelist.json"))
+
+
+def test_dump_reports_firmware_too_old(runner: CliRunner, tmp_path: Path) -> None:
+    """Old firmware is diagnosed as old, not as a disabled REST API."""
+    mock_cls = _mock_peblar_for_dump(
+        rest_api_error=PeblarUnsupportedFirmwareVersionError("requires firmware 1.6")
+    )
+    exit_code, output = _invoke(
+        runner, ["dump", *_AUTH, "--output", str(tmp_path)], mock_cls
+    )
+    assert exit_code == 0
+    assert "firmware too old" in output
+    assert "not enabled" not in output
+
+    # The web API fixtures still landed; only the REST ones were skipped.
+    assert (tmp_path / "standalonelist.json").exists()
+    assert not (tmp_path / "meter.json").exists()
+
+
+def test_dump_reports_a_disabled_rest_api(runner: CliRunner, tmp_path: Path) -> None:
+    """A charger with the API switched off still says so."""
+    mock_cls = _mock_peblar_for_dump()
+    exit_code, output = _invoke(
+        runner, ["dump", *_AUTH, "--output", str(tmp_path)], mock_cls
+    )
+    assert exit_code == 0
+    assert "not enabled or not allowed" in output
