@@ -87,6 +87,36 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+### Live updates
+
+The charger also pushes changes over a websocket, which beats polling and keeps you clear of the rate limit entirely:
+
+```python
+import asyncio
+
+from peblar import Peblar, PeblarSessionStatus
+
+
+async def main() -> None:
+    """Show an example of following a Peblar charging session live."""
+    async with Peblar(host="192.168.1.123") as peblar:
+        await peblar.login(password="Sup3rS3cr3t!")
+
+        def on_session(session: PeblarSessionStatus) -> None:
+            print(session.state, session.meter_data)
+
+        async with peblar.websocket() as websocket:
+            # The current state arrives immediately, then on every change
+            await websocket.subscribe_session_status(on_session)
+            await websocket.listen()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+The CLI wraps this in `peblar watch`.
+
 ## Changelog & releases
 
 This repository keeps a change log using [GitHub's releases][releases]

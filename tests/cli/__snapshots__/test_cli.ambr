@@ -185,6 +185,11 @@
       'password',
       'quiet',
     ]),
+    'watch': list([
+      'host',
+      'password',
+      'quiet',
+    ]),
   })
 # ---
 # name: test_config

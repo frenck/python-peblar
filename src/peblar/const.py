@@ -103,6 +103,52 @@ class SmartChargingMode(StrEnum):
     "Charge only within the defined schedule."
 
 
+class SessionState(StrEnum):
+    """Peblar charging session state.
+
+    Pushed over the websocket. These are the values the charger's own web
+    interface knows how to render.
+    """
+
+    AVAILABLE = "available"
+    """Idle and ready, nothing plugged in."""
+
+    CHARGING = "charging"
+    """Actively delivering energy to the EV."""
+
+    FAULTED = "faulted"
+    """The charger detected a fault."""
+
+    FINISHING = "finishing"
+    """The session is wrapping up."""
+
+    PREPARING_AUTHORIZED = "preparingAuthorized"
+    """Authorized, waiting for a cable."""
+
+    PREPARING_PLUGGED_IN = "preparingPluggedIn"
+    """Cable plugged in, waiting for authorization."""
+
+    UNAVAILABLE = "unavailable"
+    """Not available for charging."""
+
+
+class WebsocketTopic(StrEnum):
+    """Peblar websocket topics that take no parameters.
+
+    The session status topic is per connector, see
+    PeblarWebsocket.subscribe_session_status().
+    """
+
+    RFID_TOKEN_FOUND = "/rfid/tokenfound"  # noqa: S105
+    """An RFID token was held against the reader."""
+
+    STATUS_CHANGED = "/system/diagnostics/statuschanged"
+    """An error or warning signal became active or cleared."""
+
+    VEHICLE_TOKEN_FOUND = "/vehicle/tokenfound"  # noqa: S105
+    """A vehicle identified itself for autocharge."""
+
+
 class ChargeLimiter(StrEnum):
     """Peblar charge limiter."""
 
