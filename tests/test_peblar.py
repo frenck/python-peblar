@@ -24,6 +24,7 @@ from peblar.exceptions import (
     PeblarError,
 )
 from peblar.models import (
+    PeblarMeter,
     PeblarSetUserConfiguration,
     PeblarSmartCharging,
     PeblarSystemInformation,
@@ -798,3 +799,56 @@ async def test_delete_rfid_token() -> None:
         )
         async with Peblar(host=HOST) as peblar:
             await peblar.delete_rfid_token(uid="0123456789ABCD")
+
+
+# ---------------------------------------------------------------------------
+# Single phase chargers (home-assistant/core#179900)
+# ---------------------------------------------------------------------------
+async def test_api_meter_single_phase() -> None:
+    """Test a single phase charger that omits the phase 2 and 3 fields."""
+    with aioresponses() as mocked:
+        mocked.get(
+            API_METER_URL, status=200, body=load_fixture("meter_single_phase.json")
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            meter = await api.meter()
+
+    assert meter.current_phase_1 == 0
+    assert meter.current_phase_2 is None
+    assert meter.current_phase_3 is None
+    assert meter.power_phase_2 is None
+    assert meter.power_phase_3 is None
+    assert meter.voltage_phase_1 == 219
+    assert meter.voltage_phase_2 is None
+    assert meter.energy_total == 39479
+
+
+def test_meter_current_total_skips_absent_phases() -> None:
+    """Test the total current ignores phases the charger does not have."""
+    single = PeblarMeter.from_json(load_fixture("meter_single_phase.json"))
+    assert single.current_total == 0
+
+    single.current_phase_1 = 10212
+    assert single.current_total == 10212
+
+    three = PeblarMeter.from_json(load_fixture("meter.json"))
+    assert three.current_total == 0
+    three.current_phase_1 = 100
+    three.current_phase_2 = 200
+    three.current_phase_3 = 300
+    assert three.current_total == 600
+
+
+async def test_api_system_single_phase() -> None:
+    """Test a charger that omits the signal strength fields entirely."""
+    with aioresponses() as mocked:
+        mocked.get(
+            API_SYSTEM_URL, status=200, body=load_fixture("system_single_phase.json")
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            system = await api.system()
+
+    assert system.phase_count == 1
+    assert system.force_single_phase_allowed is False
+    assert system.wlan_signal_strength is None
+    assert system.cellular_signal_strength is None

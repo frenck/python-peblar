@@ -556,7 +556,7 @@ class PeblarSystem(BaseModel):
         metadata=field_options(alias="ActiveWarningCodes")
     )
     cellular_signal_strength: int | None = field(
-        metadata=field_options(alias="CellularSignalStrength")
+        default=None, metadata=field_options(alias="CellularSignalStrength")
     )
     firmware_version: str = field(metadata=field_options(alias="FirmwareVersion"))
     force_single_phase_allowed: bool = field(
@@ -567,7 +567,7 @@ class PeblarSystem(BaseModel):
     product_serial_number: str = field(metadata=field_options(alias="ProductSn"))
     uptime: int = field(metadata=field_options(alias="Uptime"))
     wlan_signal_strength: int | None = field(
-        metadata=field_options(alias="WlanSignalStrength")
+        default=None, metadata=field_options(alias="WlanSignalStrength")
     )
 
 
@@ -658,22 +658,54 @@ class PeblarEVInterfaceChange(BaseModel):
 @dataclass(kw_only=True)
 # pylint: disable-next=too-many-instance-attributes
 class PeblarMeter(BaseModel):
-    """Object holding the meter information of the Peblar charger."""
+    """Object holding the meter information of the Peblar charger.
+
+    Single phase chargers leave the phase 2 and 3 fields out of the
+    response entirely rather than reporting zeros, so everything beyond
+    phase 1 is optional. A phase the charger does not have reads as None,
+    which is not the same as a phase sitting at 0A.
+    """
 
     current_phase_1: int = field(metadata=field_options(alias="CurrentPhase1"))
-    current_phase_2: int = field(metadata=field_options(alias="CurrentPhase2"))
-    current_phase_3: int = field(metadata=field_options(alias="CurrentPhase3"))
+    current_phase_2: int | None = field(
+        default=None, metadata=field_options(alias="CurrentPhase2")
+    )
+    current_phase_3: int | None = field(
+        default=None, metadata=field_options(alias="CurrentPhase3")
+    )
     energy_session: int = field(metadata=field_options(alias="EnergySession"))
     energy_total: int = field(metadata=field_options(alias="EnergyTotal"))
     power_phase_1: int = field(metadata=field_options(alias="PowerPhase1"))
-    power_phase_2: int = field(metadata=field_options(alias="PowerPhase2"))
-    power_phase_3: int = field(metadata=field_options(alias="PowerPhase3"))
+    power_phase_2: int | None = field(
+        default=None, metadata=field_options(alias="PowerPhase2")
+    )
+    power_phase_3: int | None = field(
+        default=None, metadata=field_options(alias="PowerPhase3")
+    )
     power_total: int = field(metadata=field_options(alias="PowerTotal"))
-    voltage_phase_1: int | None = field(metadata=field_options(alias="VoltagePhase1"))
-    voltage_phase_2: int | None = field(metadata=field_options(alias="VoltagePhase2"))
-    voltage_phase_3: int | None = field(metadata=field_options(alias="VoltagePhase3"))
+    voltage_phase_1: int | None = field(
+        default=None, metadata=field_options(alias="VoltagePhase1")
+    )
+    voltage_phase_2: int | None = field(
+        default=None, metadata=field_options(alias="VoltagePhase2")
+    )
+    voltage_phase_3: int | None = field(
+        default=None, metadata=field_options(alias="VoltagePhase3")
+    )
 
     @property
     def current_total(self) -> int:
-        """Return the total current of the Peblar charger."""
-        return self.current_phase_1 + self.current_phase_2 + self.current_phase_3
+        """Return the total current of the Peblar charger.
+
+        Phases the charger does not have are left out rather than counted
+        as zero, so a single phase charger totals just its one phase.
+        """
+        return sum(
+            current
+            for current in (
+                self.current_phase_1,
+                self.current_phase_2,
+                self.current_phase_3,
+            )
+            if current is not None
+        )
