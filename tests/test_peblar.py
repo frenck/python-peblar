@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import orjson
 import pytest
 from aiohttp import ClientConnectionError, ClientSession
@@ -12,6 +14,7 @@ from peblar.const import (
     AccessMode,
     CPState,
     LedBrightness,
+    LedIntensityMode,
     PackageType,
     SmartChargingMode,
     SolarChargingMode,
@@ -32,6 +35,8 @@ from peblar.models import (
     PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
+    resolve_led_brightness,
+    resolve_smart_charging_mode,
 )
 from peblar.peblar import PeblarApi
 from peblar.utils import build_error_message
@@ -1207,3 +1212,260 @@ def test_parameter_blob_shapes(blob: object, expected: dict[str, str]) -> None:
     data["BopSourceParameters"] = blob
     config = PeblarUserConfiguration.from_dict(data)
     assert config.bop_source_parameters == expected
+
+
+# ---------------------------------------------------------------------------
+# Expanded user configuration payload
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        (
+            SmartChargingMode.DEFAULT,
+            {"ScheduledChargingEnable": False, "SolarChargingEnable": False},
+        ),
+        (
+            SmartChargingMode.SCHEDULED,
+            {"ScheduledChargingEnable": True, "SolarChargingEnable": False},
+        ),
+        (
+            SmartChargingMode.FAST_SOLAR,
+            {
+                "ScheduledChargingEnable": False,
+                "SolarChargingEnable": True,
+                "SolarChargingMode": "MaxSolar",
+            },
+        ),
+        (
+            SmartChargingMode.SMART_SOLAR,
+            {
+                "ScheduledChargingEnable": False,
+                "SolarChargingEnable": True,
+                "SolarChargingMode": "OptimizedSolar",
+            },
+        ),
+        (
+            SmartChargingMode.PURE_SOLAR,
+            {
+                "ScheduledChargingEnable": False,
+                "SolarChargingEnable": True,
+                "SolarChargingMode": "PureSolar",
+            },
+        ),
+    ],
+)
+def test_set_user_configuration_smart_charging(
+    mode: SmartChargingMode,
+    expected: dict[str, object],
+) -> None:
+    """Test the UI smart charging mode expands into the charger's fields."""
+    payload = PeblarSetUserConfiguration(smart_charging=mode)
+    assert orjson.loads(payload.to_json()) == expected
+
+
+@pytest.mark.parametrize(
+    ("brightness", "expected"),
+    [
+        (LedBrightness.AUTOMATIC, {"HmiLedIntensityMode": "Auto"}),
+        (
+            LedBrightness.OFF,
+            {"HmiLedIntensityMode": "Fixed", "HmiLedIntensityManual": 0},
+        ),
+        (
+            LedBrightness.MEDIUM,
+            {"HmiLedIntensityMode": "Fixed", "HmiLedIntensityManual": 22},
+        ),
+        (
+            LedBrightness.BRIGHT,
+            {"HmiLedIntensityMode": "Fixed", "HmiLedIntensityManual": 100},
+        ),
+    ],
+)
+def test_set_user_configuration_led_brightness(
+    brightness: LedBrightness,
+    expected: dict[str, object],
+) -> None:
+    """Test the UI LED brightness expands into the charger's fields."""
+    payload = PeblarSetUserConfiguration(led_brightness=brightness)
+    assert orjson.loads(payload.to_json()) == expected
+
+
+def test_set_user_configuration_omits_untouched_fields() -> None:
+    """Test only the settings you actually set reach the charger."""
+    payload = PeblarSetUserConfiguration(user_defined_charge_limit_current=10)
+    assert orjson.loads(payload.to_json()) == {"UserDefinedChargeLimitCurrent": 10}
+
+
+async def test_update_user_configuration_multiple_settings() -> None:
+    """Test a single update can carry several settings at once."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.update_user_configuration(
+                PeblarSetUserConfiguration(
+                    buzzer_volume=SoundVolume.LOW,
+                    user_defined_charge_limit_current=10,
+                    user_keep_socket_locked=True,
+                    modbus_server_access_mode=AccessMode.READ_ONLY,
+                ),
+            )
+
+    requests = mocked.requests
+    assert requests is not None
+    call = next(iter(requests.values()))[0]
+    assert orjson.loads(call.kwargs["data"]) == {
+        "HmiBuzzerVolume": 1,
+        "ModbusServerAccessMode": "ReadOnly",
+        "UserDefinedChargeLimitCurrent": 10,
+        "UserKeepSocketLocked": True,
+    }
+
+
+def test_set_user_configuration_ui_fields_are_not_sent() -> None:
+    """Test the replicated UI fields never reach the wire themselves."""
+    payload = orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            led_brightness=LedBrightness.OFF,
+        ).to_json()
+    )
+    assert "smart_charging" not in payload
+    assert "led_brightness" not in payload
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        ("default", (False, False, None)),
+        ("scheduled", (True, False, None)),
+        ("fast_solar", (False, True, SolarChargingMode.MAX_SOLAR)),
+        ("smart_solar", (False, True, SolarChargingMode.OPTIMIZED_SOLAR)),
+        ("pure_solar", (False, True, SolarChargingMode.PURE_SOLAR)),
+    ],
+)
+def test_resolve_smart_charging_mode_accepts_plain_strings(
+    mode: str,
+    expected: tuple[bool, bool, SolarChargingMode | None],
+) -> None:
+    """Test a plain string means the same as the enum member.
+
+    SmartChargingMode is a StrEnum, so comparing by identity would send a
+    caller passing "scheduled" down the default path and quietly turn
+    scheduled charging off instead of on.
+    """
+    assert resolve_smart_charging_mode(cast("SmartChargingMode", mode)) == expected
+    assert resolve_smart_charging_mode(SmartChargingMode(mode)) == expected
+
+
+def test_resolve_smart_charging_mode_rejects_unknown() -> None:
+    """Test an unrecognised mode raises instead of disabling everything."""
+    with pytest.raises(ValueError, match="Unknown smart charging mode"):
+        resolve_smart_charging_mode(cast("SmartChargingMode", "nonsense"))
+
+
+@pytest.mark.parametrize(
+    ("brightness", "expected"),
+    [
+        (-1, (LedIntensityMode.AUTO, None)),
+        (0, (LedIntensityMode.FIXED, 0)),
+        (22, (LedIntensityMode.FIXED, 22)),
+        (100, (LedIntensityMode.FIXED, 100)),
+    ],
+)
+def test_resolve_led_brightness_accepts_plain_ints(
+    brightness: int,
+    expected: tuple[LedIntensityMode, int | None],
+) -> None:
+    """Test a plain int means the same as the enum member."""
+    assert resolve_led_brightness(cast("LedBrightness", brightness)) == expected
+    assert resolve_led_brightness(LedBrightness(brightness)) == expected
+
+
+def test_resolve_led_brightness_rejects_unknown() -> None:
+    """Test an intensity the UI has no name for never reaches the charger."""
+    with pytest.raises(ValueError, match="not a valid LedBrightness"):
+        resolve_led_brightness(cast("LedBrightness", 37))
+
+
+def test_smart_charging_payload_from_plain_string() -> None:
+    """Test the payload models accept a plain string just like the enum."""
+    assert orjson.loads(
+        PeblarSmartCharging(
+            smart_charging=cast("SmartChargingMode", "scheduled")
+        ).to_json()
+    ) == orjson.loads(
+        PeblarSmartCharging(smart_charging=SmartChargingMode.SCHEDULED).to_json()
+    )
+    assert orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=cast("SmartChargingMode", "pure_solar")
+        ).to_json()
+    ) == orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.PURE_SOLAR
+        ).to_json()
+    )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"scheduled_charging_enabled": True},
+        {"solar_charging_enabled": True},
+        {"solar_charging_mode": SolarChargingMode.PURE_SOLAR},
+    ],
+    ids=["scheduled", "solar", "solar-mode"],
+)
+def test_smart_charging_shorthand_rejects_conflicts(kwargs: dict[str, object]) -> None:
+    """Test the shorthand refuses to silently overwrite what you also set."""
+    with pytest.raises(ValueError, match="not both"):
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            **kwargs,  # ty: ignore[invalid-argument-type]
+        )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"led_intensity_mode": LedIntensityMode.AUTO},
+        {"led_intensity_manual": 100},
+    ],
+    ids=["mode", "manual"],
+)
+def test_led_brightness_shorthand_rejects_conflicts(kwargs: dict[str, object]) -> None:
+    """Test the LED shorthand refuses to silently overwrite what you set."""
+    with pytest.raises(ValueError, match="not both"):
+        PeblarSetUserConfiguration(
+            led_brightness=LedBrightness.AUTOMATIC,
+            **kwargs,  # ty: ignore[invalid-argument-type]
+        )
+
+
+def test_smart_charging_model_rejects_conflicts() -> None:
+    """Test the same guard applies to the smart charging payload."""
+    with pytest.raises(ValueError, match="not both"):
+        PeblarSmartCharging(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            solar_charging_enable=True,
+        )
+
+
+def test_shorthand_and_low_level_fields_work_on_their_own() -> None:
+    """Test the guard only fires on a genuine overlap."""
+    assert orjson.loads(
+        PeblarSetUserConfiguration(led_brightness=LedBrightness.MEDIUM).to_json()
+    ) == {"HmiLedIntensityManual": 22, "HmiLedIntensityMode": "Fixed"}
+    assert orjson.loads(
+        PeblarSetUserConfiguration(led_intensity_manual=50).to_json()
+    ) == {"HmiLedIntensityManual": 50}
+    assert orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            buzzer_volume=SoundVolume.LOW,
+        ).to_json()
+    ) == {
+        "HmiBuzzerVolume": 1,
+        "ScheduledChargingEnable": True,
+        "SolarChargingEnable": False,
+    }

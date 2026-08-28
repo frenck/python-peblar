@@ -18,7 +18,6 @@ from tenacity import (
 )
 from yarl import URL
 
-from .const import LedBrightness, LedIntensityMode, SoundVolume
 from .exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
@@ -50,13 +49,20 @@ from .models import (
     PeblarUpdate,
     PeblarUserConfiguration,
     PeblarVersions,
+    resolve_led_brightness,
 )
 from .utils import build_error_message
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-    from peblar.const import AccessMode, PackageType, SmartChargingMode
+    from peblar.const import (
+        AccessMode,
+        LedBrightness,
+        PackageType,
+        SmartChargingMode,
+        SoundVolume,
+    )
 
 
 LOGIN_URI = URL("auth/login")
@@ -297,17 +303,14 @@ class Peblar:
 
     async def set_led_brightness(self, *, brightness: LedBrightness) -> None:
         """Set the LED brightness of the Peblar charger."""
-        if brightness == LedBrightness.AUTOMATIC:
-            data = PeblarLedIntensity(led_intensity_mode=LedIntensityMode.AUTO)
-        else:
-            data = PeblarLedIntensity(
-                led_intensity_mode=LedIntensityMode.FIXED,
-                led_intensity_manual=brightness.value,
-            )
+        led_intensity_mode, led_intensity_manual = resolve_led_brightness(brightness)
         await self.request(
             URL("config/user"),
             method=hdrs.METH_PATCH,
-            data=data,
+            data=PeblarLedIntensity(
+                led_intensity_mode=led_intensity_mode,
+                led_intensity_manual=led_intensity_manual,
+            ),
         )
 
     async def identify(self) -> None:

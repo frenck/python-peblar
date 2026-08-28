@@ -41,6 +41,77 @@ class AwesomeVersionSerializationStrategy(SerializationStrategy, use_annotations
         return version
 
 
+def resolve_smart_charging_mode(
+    mode: SmartChargingMode,
+) -> tuple[bool, bool, SolarChargingMode | None]:
+    """Translate a UI smart charging mode into the charger's own fields.
+
+    The Peblar UI presents a single smart charging mode, while the charger
+    is configured through separate scheduled and solar charging fields.
+    Returns them as a (scheduled, solar, solar mode) tuple.
+
+    Compares by value, not identity: SmartChargingMode is a StrEnum, so a
+    caller handing over a plain "scheduled" has to mean the same thing as
+    the member itself. Anything unrecognised raises rather than quietly
+    turning both charging modes off.
+    """
+    if mode == SmartChargingMode.DEFAULT:
+        return False, False, None
+
+    if mode == SmartChargingMode.SCHEDULED:
+        return True, False, None
+
+    if mode == SmartChargingMode.FAST_SOLAR:
+        return False, True, SolarChargingMode.MAX_SOLAR
+
+    if mode == SmartChargingMode.SMART_SOLAR:
+        return False, True, SolarChargingMode.OPTIMIZED_SOLAR
+
+    if mode == SmartChargingMode.PURE_SOLAR:
+        return False, True, SolarChargingMode.PURE_SOLAR
+
+    msg = f"Unknown smart charging mode: {mode!r}"
+    raise ValueError(msg)
+
+
+def resolve_led_brightness(
+    brightness: LedBrightness,
+) -> tuple[LedIntensityMode, int | None]:
+    """Translate a UI LED brightness level into the charger's own fields.
+
+    Returns an (intensity mode, manual intensity) tuple; the manual
+    intensity is None when the charger follows the ambient light.
+
+    Coerces through LedBrightness, so a caller handing over a plain 22
+    means the same thing as the member itself, and an intensity the UI
+    has no name for raises rather than reaching the charger.
+    """
+    level = LedBrightness(brightness)
+    if level is LedBrightness.AUTOMATIC:
+        return LedIntensityMode.AUTO, None
+
+    return LedIntensityMode.FIXED, level.value
+
+
+def reject_conflicting_fields(
+    ui_field: str,
+    driven: dict[str, object],
+) -> None:
+    """Refuse a UI shorthand alongside the fields it expands into.
+
+    The shorthand overwrites those fields, so accepting both would mean
+    silently discarding half of what the caller asked for.
+    """
+    if conflicting := sorted(
+        name for name, value in driven.items() if value is not None
+    ):
+        msg = (
+            f"Set either {ui_field} or {', '.join(conflicting)}, not both: "
+            f"{ui_field} overwrites them"
+        )
+        raise ValueError(msg)
+
+
 class BaseModel(DataClassORJSONMixin):
     """Base model for all Peblar models."""
 
@@ -523,9 +594,45 @@ class PeblarUserConfiguration(BaseModel):
 
 
 @dataclass(kw_only=True)
+# pylint: disable-next=too-many-instance-attributes
 class PeblarSetUserConfiguration(BaseModel):
-    """Object to set user configuration of a Peblar charger."""
+    """Object to set user configuration of a Peblar charger.
 
+    Mirrors the writable half of PeblarUserConfiguration. Every field is
+    optional and only the ones that are set end up in the request, so a
+    single call can change one setting or all of them at once.
+    """
+
+    buzzer_volume: SoundVolume | None = field(
+        default=None, metadata=field_options(alias="HmiBuzzerVolume")
+    )
+    led_intensity_manual: int | None = field(
+        default=None, metadata=field_options(alias="HmiLedIntensityManual")
+    )
+    led_intensity_mode: LedIntensityMode | None = field(
+        default=None, metadata=field_options(alias="HmiLedIntensityMode")
+    )
+    local_rest_api_access_mode: AccessMode | None = field(
+        default=None, metadata=field_options(alias="LocalRestApiAccessMode")
+    )
+    local_rest_api_enabled: bool | None = field(
+        default=None, metadata=field_options(alias="LocalRestApiEnable")
+    )
+    modbus_server_access_mode: AccessMode | None = field(
+        default=None, metadata=field_options(alias="ModbusServerAccessMode")
+    )
+    modbus_server_enabled: bool | None = field(
+        default=None, metadata=field_options(alias="ModbusServerEnable")
+    )
+    scheduled_charging_enabled: bool | None = field(
+        default=None, metadata=field_options(alias="ScheduledChargingEnable")
+    )
+    solar_charging_enabled: bool | None = field(
+        default=None, metadata=field_options(alias="SolarChargingEnable")
+    )
+    solar_charging_mode: SolarChargingMode | None = field(
+        default=None, metadata=field_options(alias="SolarChargingMode")
+    )
     user_defined_charge_limit_current: int | None = field(
         default=None, metadata=field_options(alias="UserDefinedChargeLimitCurrent")
     )
@@ -537,6 +644,49 @@ class PeblarSetUserConfiguration(BaseModel):
         default=None,
         metadata=field_options(alias="UserDefinedHouseholdPowerLimitEnable"),
     )
+    user_keep_socket_locked: bool | None = field(
+        default=None, metadata=field_options(alias="UserKeepSocketLocked")
+    )
+
+    # Replicated fields from the Peblar UI
+    led_brightness: LedBrightness | None = field(
+        default=None, metadata=field_options(serialize="omit")
+    )
+    smart_charging: SmartChargingMode | None = field(
+        default=None, metadata=field_options(serialize="omit")
+    )
+
+    def __post_init__(self) -> None:
+        """Post init hook for PeblarSetUserConfiguration object."""
+        if self.smart_charging is not None:
+            reject_conflicting_fields(
+                "smart_charging",
+                {
+                    "scheduled_charging_enabled": self.scheduled_charging_enabled,
+                    "solar_charging_enabled": self.solar_charging_enabled,
+                    "solar_charging_mode": self.solar_charging_mode,
+                },
+            )
+            (
+                self.scheduled_charging_enabled,
+                self.solar_charging_enabled,
+                solar_charging_mode,
+            ) = resolve_smart_charging_mode(self.smart_charging)
+
+            if solar_charging_mode is not None:
+                self.solar_charging_mode = solar_charging_mode
+
+        if self.led_brightness is not None:
+            reject_conflicting_fields(
+                "led_brightness",
+                {
+                    "led_intensity_mode": self.led_intensity_mode,
+                    "led_intensity_manual": self.led_intensity_manual,
+                },
+            )
+            self.led_intensity_mode, self.led_intensity_manual = resolve_led_brightness(
+                self.led_brightness
+            )
 
 
 @dataclass(kw_only=True)
@@ -560,25 +710,26 @@ class PeblarSmartCharging(BaseModel):
 
     def __post_init__(self) -> None:
         """Post init hook for PeblarSmartCharging object."""
-        if self.smart_charging:
-            if self.smart_charging == SmartChargingMode.DEFAULT:
-                self.scheduled_charging_enable = False
-                self.solar_charging_enable = False
-            elif self.smart_charging == SmartChargingMode.SCHEDULED:
-                self.scheduled_charging_enable = True
-                self.solar_charging_enable = False
-            elif self.smart_charging == SmartChargingMode.FAST_SOLAR:
-                self.scheduled_charging_enable = False
-                self.solar_charging_enable = True
-                self.solar_charging_mode = SolarChargingMode.MAX_SOLAR
-            elif self.smart_charging == SmartChargingMode.SMART_SOLAR:
-                self.scheduled_charging_enable = False
-                self.solar_charging_enable = True
-                self.solar_charging_mode = SolarChargingMode.OPTIMIZED_SOLAR
-            elif self.smart_charging == SmartChargingMode.PURE_SOLAR:
-                self.scheduled_charging_enable = False
-                self.solar_charging_enable = True
-                self.solar_charging_mode = SolarChargingMode.PURE_SOLAR
+        if self.smart_charging is None:
+            return
+
+        reject_conflicting_fields(
+            "smart_charging",
+            {
+                "scheduled_charging_enable": self.scheduled_charging_enable,
+                "solar_charging_enable": self.solar_charging_enable,
+                "solar_charging_mode": self.solar_charging_mode,
+            },
+        )
+
+        (
+            self.scheduled_charging_enable,
+            self.solar_charging_enable,
+            solar_charging_mode,
+        ) = resolve_smart_charging_mode(self.smart_charging)
+
+        if solar_charging_mode is not None:
+            self.solar_charging_mode = solar_charging_mode
 
 
 @dataclass(kw_only=True)
