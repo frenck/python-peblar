@@ -2,6 +2,9 @@
 
 from enum import IntEnum, StrEnum
 
+# Firmware version that introduced the local REST API.
+MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API = "1.6"
+
 
 class AccessMode(StrEnum):
     """Peblar access mode."""
@@ -11,6 +14,13 @@ class AccessMode(StrEnum):
 
     READ_ONLY = "ReadOnly"
     """Read only access."""
+
+
+class AuthorizationMethod(StrEnum):
+    """Peblar charge session authorization method."""
+
+    RFID = "Rfid"
+    """Authorize using an RFID token from the standalone auth list."""
 
 
 class SolarChargingMode(StrEnum):
@@ -146,6 +156,9 @@ class ChargeLimiter(StrEnum):
 
     POWER_FACTOR = "Power factor"
     """Charging limited by the maximum current due to power factor."""
+
+    RESERVED = "Reserved"
+    """Charging limited by a source reserved for internal development."""
 
     SOLAR_CHARGING = "Solar charging"
     """Charging limited by the maximum current due to solar charging."""

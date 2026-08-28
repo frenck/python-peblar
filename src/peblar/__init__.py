@@ -1,7 +1,9 @@
 """Asynchronous Python client for Peblar EV chargers."""
 
 from .const import (
+    MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API,
     AccessMode,
+    AuthorizationMethod,
     ChargeLimiter,
     CPState,
     LedBrightness,
@@ -17,6 +19,7 @@ from .exceptions import (
     PeblarConnectionTimeoutError,
     PeblarError,
     PeblarResponseError,
+    PeblarUnsupportedFirmwareVersionError,
 )
 from .models import (
     PeblarEVInterface,
@@ -32,7 +35,9 @@ from .models import (
 from .peblar import Peblar, PeblarApi
 
 __all__ = [
+    "MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API",
     "AccessMode",
+    "AuthorizationMethod",
     "CPState",
     "ChargeLimiter",
     "LedBrightness",
@@ -52,6 +57,7 @@ __all__ = [
     "PeblarSetUserConfiguration",
     "PeblarSystem",
     "PeblarSystemInformation",
+    "PeblarUnsupportedFirmwareVersionError",
     "PeblarUserConfiguration",
     "PeblarVersions",
     "SmartChargingMode",

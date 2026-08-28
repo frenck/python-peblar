@@ -28,6 +28,13 @@
       'read',
       'write',
     ]),
+    'authorize': list([
+      'host',
+      'name',
+      'password',
+      'quiet',
+      'uid',
+    ]),
     'buzzer': list([
       'host',
       'password',
@@ -380,7 +387,11 @@
   │                                                                              │
   │     The specified Peblar charger is running an unsupported firmware version. │
   │                                                                              │
-  │     The tooling currently only supports firmware versions XXX and higher.    │
+  │     too old                                                                  │
+  │                                                                              │
+  │     Update the charger and try again:                                        │
+  │                                                                              │
+  │     peblar update                                                            │
   │                                                                              │
   ╰──────────────────────────────────────────────────────────────────────────────╯
   

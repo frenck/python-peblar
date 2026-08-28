@@ -18,6 +18,10 @@ from tenacity import (
 )
 from yarl import URL
 
+from .const import (
+    MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API,
+    AuthorizationMethod,
+)
 from .exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
@@ -25,13 +29,16 @@ from .exceptions import (
     PeblarConnectionTimeoutError,
     PeblarError,
     PeblarRateLimitError,
+    PeblarUnsupportedFirmwareVersionError,
 )
 from .models import (
     BaseModel,
     PeblarApiToken,
     PeblarBuzzerVolume,
+    PeblarChargeSessionAuthorization,
     PeblarEVInterface,
     PeblarEVInterfaceChange,
+    PeblarEVInterfaceReplace,
     PeblarHealth,
     PeblarLedIntensity,
     PeblarLocalRestApiAccess,
@@ -51,7 +58,7 @@ from .models import (
     PeblarVersions,
     resolve_led_brightness,
 )
-from .utils import build_error_message
+from .utils import build_error_message, get_awesome_version
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -198,6 +205,17 @@ class Peblar:
         access_mode: AccessMode | None = None,
     ) -> PeblarApi:
         """Get and control access to the REST API."""
+        # Older firmware simply has no local REST API to hand out, and its
+        # user configuration does not carry the fields checked below.
+        versions = await self.current_versions()
+        minimum = get_awesome_version(MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API)
+        if versions.firmware_version and versions.firmware_version < minimum:
+            msg = (
+                f"The local REST API requires firmware {minimum} or later, "
+                f"this charger runs {versions.firmware_version}."
+            )
+            raise PeblarUnsupportedFirmwareVersionError(msg)
+
         user = await self.user_configuration()
         if not user.local_rest_api_allowed:
             msg = "The use of the local REST API is not allowed for this device."
@@ -570,6 +588,56 @@ class PeblarApi:
 
         result = await self.request(url)
         return PeblarEVInterface.from_json(result)
+
+    async def set_ev_interface(
+        self,
+        *,
+        charge_current_limit: int,
+        force_single_phase: bool,
+    ) -> PeblarEVInterface:
+        """Replace the complete EV interface configuration.
+
+        Where ev_interface() patches individual fields, this writes them
+        all in one go. The charger answers with the resulting state, so no
+        follow-up read is needed.
+        """
+        result = await self.request(
+            URL("evinterface"),
+            method=hdrs.METH_PUT,
+            data=PeblarEVInterfaceReplace(
+                charge_current_limit=charge_current_limit,
+                force_single_phase=force_single_phase,
+            ),
+        )
+        return PeblarEVInterface.from_json(result)
+
+    async def authorize_charge_session(
+        self,
+        *,
+        token: str | None = None,
+        name: str | None = None,
+        method: AuthorizationMethod = AuthorizationMethod.RFID,
+    ) -> None:
+        """Authorize or deauthorize the running charge session.
+
+        Presents a token from the standalone auth list to the charger, as
+        if it were held against the reader. Identify it by its UID
+        (`token`) or by its description (`name`), not both. The charger
+        toggles: it authorizes an unauthorized session and stops an
+        authorized one.
+
+        The charger accepts the request before acting on it, so watch the
+        EV interface state to see the result land.
+        """
+        await self.request(
+            URL("authorization/charge-session"),
+            method=hdrs.METH_POST,
+            data=PeblarChargeSessionAuthorization(
+                method=method,
+                token=token,
+                name=name,
+            ),
+        )
 
     async def health(self) -> PeblarHealth:
         """Get health information from the Peblar API."""

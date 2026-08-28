@@ -12,6 +12,7 @@ from aioresponses import aioresponses
 from peblar import Peblar
 from peblar.const import (
     AccessMode,
+    ChargeLimiter,
     CPState,
     LedBrightness,
     LedIntensityMode,
@@ -27,8 +28,10 @@ from peblar.exceptions import (
     PeblarConnectionTimeoutError,
     PeblarError,
     PeblarRateLimitError,
+    PeblarUnsupportedFirmwareVersionError,
 )
 from peblar.models import (
+    PeblarEVInterface,
     PeblarMeter,
     PeblarSetUserConfiguration,
     PeblarSmartCharging,
@@ -75,6 +78,21 @@ def patched_fixture(filename: str, **overrides: object) -> str:
     data = orjson.loads(load_fixture(filename))
     data.update(overrides)
     return orjson.dumps(data).decode()
+
+
+def request_payload(mocked: aioresponses) -> dict[str, object]:
+    """Return the decoded JSON body of the single request that was made."""
+    requests = mocked.requests
+    assert requests is not None
+    call = next(iter(requests.values()))[0]
+    return orjson.loads(call.kwargs["data"])
+
+
+def mock_firmware_check(mocked: aioresponses) -> None:
+    """Mock the firmware version lookup that rest_api() does up front."""
+    mocked.get(
+        CURRENT_VERSIONS_URL, status=200, body=load_fixture("versions_current.json")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +382,7 @@ async def test_rest_api_disallowed() -> None:
     """Test rest_api raises when the charger disallows the local REST API."""
     body = patched_fixture("user_configuration.json", LocalRestApiAllowed=False)
     with aioresponses() as mocked:
+        mock_firmware_check(mocked)
         mocked.get(USER_CONFIG_URL, status=200, body=body)
         async with Peblar(host=HOST) as peblar:
             with pytest.raises(PeblarError, match="not allowed"):
@@ -374,6 +393,7 @@ async def test_rest_api_disabled() -> None:
     """Test rest_api raises when the local REST API is disabled."""
     body = patched_fixture("user_configuration.json", LocalRestApiEnable=False)
     with aioresponses() as mocked:
+        mock_firmware_check(mocked)
         mocked.get(USER_CONFIG_URL, status=200, body=body)
         async with Peblar(host=HOST) as peblar:
             with pytest.raises(PeblarError, match="not enabled"):
@@ -384,6 +404,7 @@ async def test_rest_api_enable_flow() -> None:
     """Test rest_api toggles the API on via PATCH when currently disabled."""
     body = patched_fixture("user_configuration.json", LocalRestApiEnable=False)
     with aioresponses() as mocked:
+        mock_firmware_check(mocked)
         mocked.get(USER_CONFIG_URL, status=200, body=body)
         mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
         mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
@@ -559,6 +580,7 @@ async def test_api_401_without_refresh_callback() -> None:
 async def test_peblar_login_stores_password_for_refresh() -> None:
     """Test that login() stores the password so rest_api() can refresh tokens."""
     with aioresponses() as mocked:
+        mock_firmware_check(mocked)
         mocked.post(LOGIN_URL, status=200, body="", content_type="text/plain")
         mocked.get(
             USER_CONFIG_URL, status=200, body=load_fixture("user_configuration.json")
@@ -606,6 +628,7 @@ async def test_rest_api_already_enabled_noop() -> None:
     """Test rest_api skips the PATCH when enable already matches current state."""
     body = load_fixture("user_configuration.json")
     with aioresponses() as mocked:
+        mock_firmware_check(mocked)
         mocked.get(USER_CONFIG_URL, status=200, body=body)
         # No PATCH mock: if rest_api tries to PATCH, aioresponses raises ConnectionError
         mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
@@ -618,6 +641,7 @@ async def test_rest_api_access_mode_already_matches() -> None:
     """Test rest_api skips the PATCH when access_mode matches current state."""
     body = load_fixture("user_configuration.json")
     with aioresponses() as mocked:
+        mock_firmware_check(mocked)
         mocked.get(USER_CONFIG_URL, status=200, body=body)
         mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
         async with Peblar(host=HOST) as peblar:
@@ -1469,3 +1493,106 @@ def test_shorthand_and_low_level_fields_work_on_their_own() -> None:
         "ScheduledChargingEnable": True,
         "SolarChargingEnable": False,
     }
+
+
+# ---------------------------------------------------------------------------
+# Local REST API: firmware guard, PUT and charge session authorization
+# ---------------------------------------------------------------------------
+API_AUTHORIZATION_URL = API_BASE_URL + "authorization/charge-session"
+
+
+async def test_rest_api_unsupported_firmware() -> None:
+    """Test rest_api refuses firmware older than the local REST API itself."""
+    body = patched_fixture("versions_current.json", Firmware="1.5.0+1+WL-1")
+    with aioresponses() as mocked:
+        mocked.get(CURRENT_VERSIONS_URL, status=200, body=body)
+        async with Peblar(host=HOST) as peblar:
+            with pytest.raises(
+                PeblarUnsupportedFirmwareVersionError, match="requires firmware"
+            ):
+                await peblar.rest_api()
+
+
+async def test_rest_api_unparsable_firmware_is_allowed() -> None:
+    """Test an unreadable firmware version does not block the local REST API."""
+    body = patched_fixture("versions_current.json", Firmware="")
+    with aioresponses() as mocked:
+        mocked.get(CURRENT_VERSIONS_URL, status=200, body=body)
+        mocked.get(
+            USER_CONFIG_URL, status=200, body=load_fixture("user_configuration.json")
+        )
+        mocked.get(API_TOKEN_URL, status=200, body=load_fixture("api_token.json"))
+        async with Peblar(host=HOST) as peblar:
+            api = await peblar.rest_api()
+            await api.close()
+    assert api.token == "0" * 64
+
+
+async def test_api_set_ev_interface() -> None:
+    """Test set_ev_interface PUTs and parses the returned state."""
+    with aioresponses() as mocked:
+        mocked.put(API_EV_URL, status=200, body=load_fixture("ev_interface.json"))
+        async with PeblarApi(host=HOST, token="t") as api:
+            ev_interface = await api.set_ev_interface(
+                charge_current_limit=16000,
+                force_single_phase=False,
+            )
+    assert ev_interface.charge_current_limit == 16000
+    assert request_payload(mocked) == {
+        "ChargeCurrentLimit": 16000,
+        "Force1Phase": False,
+    }
+
+
+async def test_api_authorize_charge_session_by_token() -> None:
+    """Test authorizing a charge session with a token UID."""
+    with aioresponses() as mocked:
+        mocked.post(
+            API_AUTHORIZATION_URL, status=202, body="", content_type="text/plain"
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            await api.authorize_charge_session(token="0123456789ABCD")
+    assert request_payload(mocked) == {
+        "Method": "Rfid",
+        "Token": "0123456789ABCD",
+    }
+
+
+async def test_api_authorize_charge_session_by_name() -> None:
+    """Test authorizing a charge session with a token description."""
+    with aioresponses() as mocked:
+        mocked.post(
+            API_AUTHORIZATION_URL, status=202, body="", content_type="text/plain"
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            await api.authorize_charge_session(name="My RFID Card")
+    assert request_payload(mocked) == {
+        "Method": "Rfid",
+        "Name": "My RFID Card",
+    }
+
+
+@pytest.mark.parametrize(
+    ("token", "name"),
+    [
+        (None, None),
+        ("0123456789ABCD", "My RFID Card"),
+    ],
+    ids=["neither", "both"],
+)
+async def test_api_authorize_charge_session_needs_exactly_one(
+    token: str | None,
+    name: str | None,
+) -> None:
+    """Test the charge session payload insists on exactly one identifier."""
+    async with PeblarApi(host=HOST, token="t") as api:
+        with pytest.raises(ValueError, match="exactly one"):
+            await api.authorize_charge_session(token=token, name=name)
+
+
+def test_charge_limiter_reserved() -> None:
+    """Test the reserved limiter source Peblar documents is recognised."""
+    ev_interface = PeblarEVInterface.from_json(
+        patched_fixture("ev_interface.json", ChargeCurrentLimitSource="Reserved"),
+    )
+    assert ev_interface.charge_current_limit_source is ChargeLimiter.RESERVED
