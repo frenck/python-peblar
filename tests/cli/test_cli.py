@@ -14,6 +14,8 @@ from typer.testing import CliRunner
 from peblar.cli import cli
 from peblar.exceptions import (
     PeblarAuthenticationError,
+    PeblarBadRequestError,
+    PeblarRateLimitError,
     PeblarUnsupportedFirmwareVersionError,
 )
 from peblar.models import (
@@ -344,3 +346,33 @@ def test_unsupported_firmware_error_handler(
         handler(PeblarUnsupportedFirmwareVersionError("too old"))
     assert exc_info.value.code == 1
     assert capsys.readouterr().out == snapshot
+
+
+def test_rate_limit_error_handler(
+    capsys: pytest.CaptureFixture[str],
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Rate limit error handler prints a panel and exits with 1."""
+    handler = cli.error_handlers[PeblarRateLimitError]
+    with pytest.raises(SystemExit) as exc_info:
+        handler(PeblarRateLimitError("slow down"))
+    assert exc_info.value.code == 1
+    assert capsys.readouterr().out == snapshot
+
+
+def test_bad_request_message_survives_rich_markup(
+    runner: CliRunner,
+) -> None:
+    """Charger error text is printed verbatim, tags and all.
+
+    The message carries the charger's own `statusmsg`, so anything in it
+    that looks like Rich markup must not be swallowed on the way out.
+    """
+    reason = "limit [/] rejected [bold] see [link=http://x]docs[/link]"
+    mock_cls = _mock_peblar(login=None)
+    mock_cls.return_value.__aenter__.return_value.meter_history.side_effect = (
+        PeblarBadRequestError(f"Bad request sent to the Peblar charger: {reason}")
+    )
+    exit_code, output = _invoke(runner, ["meterhistory", *_AUTH], mock_cls)
+    assert exit_code == 1
+    assert reason in output

@@ -19,9 +19,11 @@ from peblar.const import (
 )
 from peblar.exceptions import (
     PeblarAuthenticationError,
+    PeblarBadRequestError,
     PeblarConnectionError,
     PeblarConnectionTimeoutError,
     PeblarError,
+    PeblarRateLimitError,
 )
 from peblar.models import (
     PeblarMeter,
@@ -32,6 +34,7 @@ from peblar.models import (
     PeblarVersions,
 )
 from peblar.peblar import PeblarApi
+from peblar.utils import build_error_message
 from tests import load_fixture
 
 HOST = "example.com"
@@ -955,3 +958,144 @@ def test_user_configuration_empty_parameter_blobs() -> None:
     )
     assert config.bop_source_parameters == {}
     assert config.solar_charging_source_parameters == {}
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting and charger supplied error messages
+# ---------------------------------------------------------------------------
+async def test_rate_limit_retries_and_raises() -> None:
+    """Test a persistent HTTP 429 is retried and then surfaces."""
+    with aioresponses() as mocked:
+        for _ in range(3):
+            mocked.get(SYSTEM_INFO_URL, status=429, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            with pytest.raises(PeblarRateLimitError, match="Rate limit exceeded"):
+                await peblar.system_information()
+
+
+async def test_rate_limit_then_success() -> None:
+    """Test a single HTTP 429 is retried and then succeeds."""
+    with aioresponses() as mocked:
+        mocked.get(SYSTEM_INFO_URL, status=429, body="", content_type="text/plain")
+        mocked.get(
+            SYSTEM_INFO_URL, status=200, body=load_fixture("system_information.json")
+        )
+        async with Peblar(host=HOST) as peblar:
+            info = await peblar.system_information()
+    assert info.product_vendor_name == "Peblar"
+
+
+async def test_api_rate_limit() -> None:
+    """Test the local REST API surfaces HTTP 429 as a rate limit error."""
+    with aioresponses() as mocked:
+        for _ in range(3):
+            mocked.get(API_METER_URL, status=429, body="", content_type="text/plain")
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarRateLimitError, match="Rate limit exceeded"):
+                await api.meter()
+
+
+async def test_error_response_includes_charger_message() -> None:
+    """Test the charger's own error message ends up in the exception."""
+    with aioresponses() as mocked:
+        mocked.get(
+            API_SYSTEM_URL,
+            status=500,
+            body=orjson.dumps({"statusmsg": "An internal server error occurred"}),
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarError, match="An internal server error occurred"):
+                await api.system()
+
+
+async def test_error_response_without_message() -> None:
+    """Test a non-JSON error body leaves the generic message intact."""
+    with aioresponses() as mocked:
+        mocked.get(API_SYSTEM_URL, status=500, body="oops", content_type="text/plain")
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarError, match="Error occurred while communicating"):
+                await api.system()
+
+
+async def test_bad_request_includes_charger_message() -> None:
+    """Test a rejected request carries the charger's reason along."""
+    with aioresponses() as mocked:
+        mocked.patch(
+            API_EV_URL,
+            status=400,
+            body=orjson.dumps({"statusmsg": "ChargeCurrentLimit out of range"}),
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(
+                PeblarBadRequestError, match="ChargeCurrentLimit out of range"
+            ):
+                await api.ev_interface(charge_current_limit=99999)
+
+
+async def test_authentication_error_includes_charger_message() -> None:
+    """Test an unauthorized response carries the charger's message along."""
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=401, body=orjson.dumps({"statusmsg": "Nope"}))
+        async with Peblar(host=HOST) as peblar:
+            with pytest.raises(PeblarAuthenticationError, match="Nope"):
+                await peblar.login(password="wrong")
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        ('{"statusmsg": "Nope"}', "Boom: Nope"),
+        ('{"StatusMsg": "Nope"}', "Boom: Nope"),
+        ('{"statusmsg": ""}', "Boom"),
+        ('{"statusmsg": 42}', "Boom"),
+        ("{}", "Boom"),
+        ("[]", "Boom"),
+        ("not json", "Boom"),
+        ("", "Boom"),
+    ],
+)
+def test_build_error_message(content: str, expected: str) -> None:
+    """Test error bodies are only used when they carry a usable message."""
+    assert build_error_message("Boom", content) == expected
+
+
+@pytest.mark.parametrize("status", [400, 401, 429, 500])
+async def test_undecodable_error_body_still_maps_to_a_peblar_error(
+    status: int,
+) -> None:
+    """Test a body that is not valid UTF-8 does not escape the error mapping.
+
+    The body is read before the status is checked, so a charger answering
+    an error with a mangled body must still raise a PeblarError rather
+    than a UnicodeDecodeError nobody is catching.
+    """
+    with aioresponses() as mocked:
+        for _ in range(3):
+            mocked.get(
+                API_SYSTEM_URL,
+                status=status,
+                body=b"\xff\xfe not utf-8 \x80",
+                content_type="application/json",
+            )
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarError):
+                await api.system()
+
+
+async def test_undecodable_success_body_is_replaced_not_raised() -> None:
+    """Test undecodable bytes in a successful body do not blow up the read."""
+    with aioresponses() as mocked:
+        mocked.get(
+            API_SYSTEM_URL,
+            status=200,
+            body=b'{"ActiveErrorCodes": [], "ActiveWarningCodes": [],'
+            b'"CellularSignalStrength": null, "FirmwareVersion": "1.9.2\xff",'
+            b'"Force1PhaseAllowed": true, "PhaseCount": 3, "ProductPn": "p",'
+            b'"ProductSn": "s", "Uptime": 1, "WlanSignalStrength": null}',
+            content_type="application/json",
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            system = await api.system()
+
+    assert system.phase_count == 3
+    assert system.firmware_version.startswith("1.9.2")
