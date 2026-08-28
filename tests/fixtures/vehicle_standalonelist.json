@@ -1,0 +1,12 @@
+{
+  "VehicleTokens": [
+    {
+      "Alias": "My EV",
+      "EvccId": "NL-ABC-0123456789-1"
+    },
+    {
+      "Alias": "The other one",
+      "EvccId": "NL-ABC-9876543210-2"
+    }
+  ]
+}

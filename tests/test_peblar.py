@@ -1761,3 +1761,84 @@ async def test_set_scheduled_charging() -> None:
         {"CurrentLimit": 0, "StartTime": 0},
         {"CurrentLimit": 10, "StartTime": 1380},
     ]
+
+
+# ---------------------------------------------------------------------------
+# Autocharge vehicle list
+# ---------------------------------------------------------------------------
+VEHICLE_LIST_URL = BASE_URL + "config/auth/vehicle-standalonelist"
+
+
+async def test_rfid_token_single() -> None:
+    """Test fetching one RFID token by its UID."""
+    with aioresponses() as mocked:
+        mocked.get(
+            STANDALONELIST_URL + "/0123456789ABCD",
+            status=200,
+            body=orjson.dumps(
+                {
+                    "RfidTokenUid": "0123456789ABCD",
+                    "RfidTokenDescription": "My RFID Card",
+                }
+            ),
+        )
+        async with Peblar(host=HOST) as peblar:
+            token = await peblar.rfid_token(uid="0123456789ABCD")
+    assert token.rfid_token_description == "My RFID Card"
+
+
+async def test_vehicle_tokens() -> None:
+    """Test listing the autocharge vehicles."""
+    with aioresponses() as mocked:
+        mocked.get(
+            VEHICLE_LIST_URL,
+            status=200,
+            body=load_fixture("vehicle_standalonelist.json"),
+        )
+        async with Peblar(host=HOST) as peblar:
+            vehicles = await peblar.vehicle_tokens()
+    assert len(vehicles) == 2
+    assert vehicles[0].evcc_id == "NL-ABC-0123456789-1"
+    assert vehicles[0].alias == "My EV"
+
+
+@pytest.mark.parametrize("body", ["null", "{}", '{"VehicleTokens": null}'])
+async def test_vehicle_tokens_empty(body: str) -> None:
+    """Test a charger without autocharge hands back nothing usable.
+
+    A charger with ISO 15118 disabled answers with a bare null rather
+    than an empty list, which is what a real one was seen doing.
+    """
+    with aioresponses() as mocked:
+        mocked.get(VEHICLE_LIST_URL, status=200, body=body)
+        async with Peblar(host=HOST) as peblar:
+            assert await peblar.vehicle_tokens() == []
+
+
+async def test_add_vehicle_token() -> None:
+    """Test adding a vehicle to the autocharge auth list."""
+    with aioresponses() as mocked:
+        mocked.post(VEHICLE_LIST_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.add_vehicle_token(
+                evcc_id="NL-ABC-0123456789-1",
+                alias="My EV",
+            )
+    assert request_payload(mocked) == {
+        "EvccId": "NL-ABC-0123456789-1",
+        "Alias": "My EV",
+        "Authorize": True,
+    }
+
+
+async def test_delete_vehicle_token() -> None:
+    """Test removing a vehicle from the autocharge auth list."""
+    with aioresponses() as mocked:
+        mocked.delete(
+            VEHICLE_LIST_URL + "/NL-ABC-0123456789-1",
+            status=200,
+            body="",
+            content_type="text/plain",
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.delete_vehicle_token(evcc_id="NL-ABC-0123456789-1")

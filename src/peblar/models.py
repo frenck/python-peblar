@@ -258,6 +258,27 @@ class PeblarRfidToken(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarVehicleToken(BaseModel):
+    """Vehicle in the autocharge auth list.
+
+    Autocharge identifies a car by the EVCC ID its ISO 15118 controller
+    presents, which is the vehicle equivalent of an RFID token UID.
+    """
+
+    evcc_id: str = field(metadata=field_options(alias="EvccId"))
+    alias: str = field(metadata=field_options(alias="Alias"))
+
+
+@dataclass(kw_only=True)
+class PeblarAddVehicleToken(BaseModel):
+    """Payload for adding a vehicle to the autocharge auth list."""
+
+    evcc_id: str = field(metadata=field_options(alias="EvccId"))
+    alias: str = field(metadata=field_options(alias="Alias"))
+    authorize: bool = field(default=True, metadata=field_options(alias="Authorize"))
+
+
+@dataclass(kw_only=True)
 class PeblarChargeSessionAuthorization(BaseModel):
     """Object holding the charge session (de)authorization payload.
 
