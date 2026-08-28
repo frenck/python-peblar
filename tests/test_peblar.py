@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import orjson
 import pytest
 from aiohttp import ClientConnectionError, ClientSession
@@ -12,6 +14,7 @@ from peblar.const import (
     AccessMode,
     CPState,
     LedBrightness,
+    LedIntensityMode,
     PackageType,
     SmartChargingMode,
     SolarChargingMode,
@@ -32,6 +35,8 @@ from peblar.models import (
     PeblarSystemInformation,
     PeblarUserConfiguration,
     PeblarVersions,
+    resolve_led_brightness,
+    resolve_smart_charging_mode,
 )
 from peblar.peblar import PeblarApi
 from peblar.utils import build_error_message
@@ -1326,3 +1331,77 @@ def test_set_user_configuration_ui_fields_are_not_sent() -> None:
     )
     assert "smart_charging" not in payload
     assert "led_brightness" not in payload
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        ("default", (False, False, None)),
+        ("scheduled", (True, False, None)),
+        ("fast_solar", (False, True, SolarChargingMode.MAX_SOLAR)),
+        ("smart_solar", (False, True, SolarChargingMode.OPTIMIZED_SOLAR)),
+        ("pure_solar", (False, True, SolarChargingMode.PURE_SOLAR)),
+    ],
+)
+def test_resolve_smart_charging_mode_accepts_plain_strings(
+    mode: str,
+    expected: tuple[bool, bool, SolarChargingMode | None],
+) -> None:
+    """Test a plain string means the same as the enum member.
+
+    SmartChargingMode is a StrEnum, so comparing by identity would send a
+    caller passing "scheduled" down the default path and quietly turn
+    scheduled charging off instead of on.
+    """
+    assert resolve_smart_charging_mode(cast("SmartChargingMode", mode)) == expected
+    assert resolve_smart_charging_mode(SmartChargingMode(mode)) == expected
+
+
+def test_resolve_smart_charging_mode_rejects_unknown() -> None:
+    """Test an unrecognised mode raises instead of disabling everything."""
+    with pytest.raises(ValueError, match="Unknown smart charging mode"):
+        resolve_smart_charging_mode(cast("SmartChargingMode", "nonsense"))
+
+
+@pytest.mark.parametrize(
+    ("brightness", "expected"),
+    [
+        (-1, (LedIntensityMode.AUTO, None)),
+        (0, (LedIntensityMode.FIXED, 0)),
+        (22, (LedIntensityMode.FIXED, 22)),
+        (100, (LedIntensityMode.FIXED, 100)),
+    ],
+)
+def test_resolve_led_brightness_accepts_plain_ints(
+    brightness: int,
+    expected: tuple[LedIntensityMode, int | None],
+) -> None:
+    """Test a plain int means the same as the enum member."""
+    assert resolve_led_brightness(cast("LedBrightness", brightness)) == expected
+    assert resolve_led_brightness(LedBrightness(brightness)) == expected
+
+
+def test_resolve_led_brightness_rejects_unknown() -> None:
+    """Test an intensity the UI has no name for never reaches the charger."""
+    with pytest.raises(ValueError, match="not a valid LedBrightness"):
+        resolve_led_brightness(cast("LedBrightness", 37))
+
+
+def test_smart_charging_payload_from_plain_string() -> None:
+    """Test the payload models accept a plain string just like the enum."""
+    assert orjson.loads(
+        PeblarSmartCharging(
+            smart_charging=cast("SmartChargingMode", "scheduled")
+        ).to_json()
+    ) == orjson.loads(
+        PeblarSmartCharging(smart_charging=SmartChargingMode.SCHEDULED).to_json()
+    )
+    assert orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=cast("SmartChargingMode", "pure_solar")
+        ).to_json()
+    ) == orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.PURE_SOLAR
+        ).to_json()
+    )

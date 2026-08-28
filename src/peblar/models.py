@@ -49,20 +49,29 @@ def resolve_smart_charging_mode(
     The Peblar UI presents a single smart charging mode, while the charger
     is configured through separate scheduled and solar charging fields.
     Returns them as a (scheduled, solar, solar mode) tuple.
+
+    Compares by value, not identity: SmartChargingMode is a StrEnum, so a
+    caller handing over a plain "scheduled" has to mean the same thing as
+    the member itself. Anything unrecognised raises rather than quietly
+    turning both charging modes off.
     """
-    if mode is SmartChargingMode.SCHEDULED:
+    if mode == SmartChargingMode.DEFAULT:
+        return False, False, None
+
+    if mode == SmartChargingMode.SCHEDULED:
         return True, False, None
 
-    if mode is SmartChargingMode.FAST_SOLAR:
+    if mode == SmartChargingMode.FAST_SOLAR:
         return False, True, SolarChargingMode.MAX_SOLAR
 
-    if mode is SmartChargingMode.SMART_SOLAR:
+    if mode == SmartChargingMode.SMART_SOLAR:
         return False, True, SolarChargingMode.OPTIMIZED_SOLAR
 
-    if mode is SmartChargingMode.PURE_SOLAR:
+    if mode == SmartChargingMode.PURE_SOLAR:
         return False, True, SolarChargingMode.PURE_SOLAR
 
-    return False, False, None
+    msg = f"Unknown smart charging mode: {mode!r}"
+    raise ValueError(msg)
 
 
 def resolve_led_brightness(
@@ -72,11 +81,15 @@ def resolve_led_brightness(
 
     Returns an (intensity mode, manual intensity) tuple; the manual
     intensity is None when the charger follows the ambient light.
+
+    Coerces through LedBrightness, so a caller handing over a plain 22
+    means the same thing as the member itself, and an intensity the UI
+    has no name for raises rather than reaching the charger.
     """
-    if brightness is LedBrightness.AUTOMATIC:
+    if LedBrightness(brightness) is LedBrightness.AUTOMATIC:
         return LedIntensityMode.AUTO, None
 
-    return LedIntensityMode.FIXED, brightness.value
+    return LedIntensityMode.FIXED, LedBrightness(brightness).value
 
 
 class BaseModel(DataClassORJSONMixin):
