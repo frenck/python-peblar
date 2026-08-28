@@ -33,6 +33,7 @@ from .exceptions import (
 )
 from .models import (
     BaseModel,
+    PeblarAddVehicleToken,
     PeblarApiToken,
     PeblarAuthStatus,
     PeblarBuzzerVolume,
@@ -61,6 +62,7 @@ from .models import (
     PeblarSystemInformation,
     PeblarUpdate,
     PeblarUserConfiguration,
+    PeblarVehicleToken,
     PeblarVersions,
     PeblarWebInterfaceMode,
     resolve_led_brightness,
@@ -93,6 +95,19 @@ class _RfidTokenListEnvelope(TypedDict):
     """RFID token list response envelope."""
 
     Tokens: list[_RfidTokenPayload]
+
+
+class _VehicleTokenPayload(TypedDict):
+    """Single vehicle payload returned by the autocharge list endpoint."""
+
+    EvccId: str
+    Alias: str
+
+
+class _VehicleTokenListEnvelope(TypedDict):
+    """Autocharge vehicle list response envelope."""
+
+    VehicleTokens: list[_VehicleTokenPayload]
 
 
 @dataclass(kw_only=True)
@@ -373,6 +388,52 @@ class Peblar:
                 session=[],
             )
         return PeblarMeterHistory.from_json(result)
+
+    async def rfid_token(self, *, uid: str) -> PeblarRfidToken:
+        """Get a single RFID token from the standalone auth list."""
+        result = await self.request(URL("config/auth/standalonelist") / uid)
+        return PeblarRfidToken.from_json(result)
+
+    async def vehicle_tokens(self) -> list[PeblarVehicleToken]:
+        """Get the list of vehicles in the autocharge auth list.
+
+        Autocharge rides on ISO 15118, so a charger with that turned off
+        hands back nothing at all here rather than an empty list.
+        """
+        result = await self.request(URL("config/auth/vehicle-standalonelist"))
+        data: _VehicleTokenListEnvelope | None = orjson.loads(result)
+        if not data:
+            return []
+
+        return [
+            PeblarVehicleToken.from_dict(item)
+            for item in data.get("VehicleTokens") or []
+        ]
+
+    async def add_vehicle_token(
+        self,
+        *,
+        evcc_id: str,
+        alias: str,
+        authorize: bool = True,
+    ) -> None:
+        """Add a vehicle to the autocharge auth list."""
+        await self.request(
+            URL("config/auth/vehicle-standalonelist"),
+            method=hdrs.METH_POST,
+            data=PeblarAddVehicleToken(
+                evcc_id=evcc_id,
+                alias=alias,
+                authorize=authorize,
+            ),
+        )
+
+    async def delete_vehicle_token(self, *, evcc_id: str) -> None:
+        """Remove a vehicle from the autocharge auth list."""
+        await self.request(
+            URL("config/auth/vehicle-standalonelist") / evcc_id,
+            method=hdrs.METH_DELETE,
+        )
 
     async def add_rfid_token(
         self,

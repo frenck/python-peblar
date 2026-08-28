@@ -39,6 +39,7 @@ from .models import (
     PeblarSystem,
     PeblarSystemInformation,
     PeblarUserConfiguration,
+    PeblarVehicleToken,
     PeblarVersions,
 )
 from .peblar import Peblar, PeblarApi
@@ -77,6 +78,7 @@ __all__ = [
     "PeblarSystemInformation",
     "PeblarUnsupportedFirmwareVersionError",
     "PeblarUserConfiguration",
+    "PeblarVehicleToken",
     "PeblarVersions",
     "SmartChargingMode",
     "SolarChargingMode",
