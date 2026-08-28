@@ -661,9 +661,12 @@ class PeblarMeter(BaseModel):
     """Object holding the meter information of the Peblar charger.
 
     Single phase chargers leave the phase 2 and 3 fields out of the
-    response entirely rather than reporting zeros, so everything beyond
-    phase 1 is optional. A phase the charger does not have reads as None,
-    which is not the same as a phase sitting at 0A.
+    response entirely rather than reporting zeros, so those are optional.
+    The voltages are optional on top of that, phase 1 included, since the
+    charger reports nothing for a phase it cannot currently measure.
+
+    A field reading None means the charger did not report it, which is
+    not the same as it reporting 0.
     """
 
     current_phase_1: int = field(metadata=field_options(alias="CurrentPhase1"))

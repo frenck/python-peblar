@@ -82,7 +82,12 @@ def format_watts(watts: int | None) -> str:
 
 
 def format_volts(volts: int | None) -> str:
-    """Format a voltage reading, or mark it as unmeasurable."""
+    """Format a voltage reading, or mark it as not reported.
+
+    The charger leaves a voltage out both for a phase it does not have
+    and for one it cannot currently measure, so this stays vaguer than
+    the current and power equivalents.
+    """
     if volts is None:
         return "N/A"
     return f"{volts}V"
