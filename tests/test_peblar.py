@@ -473,6 +473,23 @@ async def test_api_system() -> None:
             system = await api.system()
     assert system.uptime == 3514985
     assert system.phase_count == 3
+    assert system.active_error_codes == []
+    assert system.active_warning_codes == []
+
+
+async def test_api_system_error_codes_are_integers() -> None:
+    """Test the charger's error and warning codes stay numbers.
+
+    The API documents these as integer arrays. Typing them as strings
+    still parses, because the codes get stringified on the way in, which
+    is exactly the kind of silent damage a type is meant to prevent.
+    """
+    with aioresponses() as mocked:
+        mocked.get(API_SYSTEM_URL, status=200, body=load_fixture("system_faulted.json"))
+        async with PeblarApi(host=HOST, token="t") as api:
+            system = await api.system()
+    assert system.active_error_codes == [10, 22]
+    assert system.active_warning_codes == [5]
 
 
 async def test_api_ev_interface_read() -> None:

@@ -447,6 +447,29 @@
   
   '''
 # ---
+# name: test_system_with_active_codes
+  '''
+                 Peblar charger system status               
+  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Property                      ┃ Value                  ┃
+  ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ Active error codes            │ 10, 22                 │
+  │ Active warning codes          │ 5                      │
+  ├───────────────────────────────┼────────────────────────┤
+  │ Phase count                   │ 3                      │
+  │ Force of single phase allowed │ ✅                     │
+  ├───────────────────────────────┼────────────────────────┤
+  │ Firmware version              │ 1.9.0+1+WL-1           │
+  │ Product serial number         │ 00-00-AAA-000          │
+  │ Product part number           │ 0000-0000-0000         │
+  ├───────────────────────────────┼────────────────────────┤
+  │ Uptime                        │ 3514985 seconds        │
+  │ WLAN signal strength          │ WLAN not connected     │
+  │ Cellular signal strength      │ Cellular not connected │
+  └───────────────────────────────┴────────────────────────┘
+  
+  '''
+# ---
 # name: test_unsupported_firmware_error_handler
   '''
   ╭──────────────────────── Unsupported firmware version ────────────────────────╮

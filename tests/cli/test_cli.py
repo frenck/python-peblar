@@ -288,6 +288,22 @@ def test_system(
     assert output == snapshot
 
 
+def test_system_with_active_codes(
+    runner: CliRunner,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """System command lists the codes a faulted charger reports.
+
+    The codes are numbers, so they need converting before they can be
+    joined into a line of text.
+    """
+    system = PeblarSystem.from_json(load_fixture("system_faulted.json"))
+    mock_cls = _mock_peblar_with_api({"system": system}, login=None)
+    exit_code, output = _invoke(runner, ["system", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert output == snapshot
+
+
 # ---------------------------------------------------------------------------
 # --quiet / -q flag
 # ---------------------------------------------------------------------------
