@@ -1405,3 +1405,67 @@ def test_smart_charging_payload_from_plain_string() -> None:
             smart_charging=SmartChargingMode.PURE_SOLAR
         ).to_json()
     )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"scheduled_charging_enabled": True},
+        {"solar_charging_enabled": True},
+        {"solar_charging_mode": SolarChargingMode.PURE_SOLAR},
+    ],
+    ids=["scheduled", "solar", "solar-mode"],
+)
+def test_smart_charging_shorthand_rejects_conflicts(kwargs: dict[str, object]) -> None:
+    """Test the shorthand refuses to silently overwrite what you also set."""
+    with pytest.raises(ValueError, match="not both"):
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            **kwargs,  # ty: ignore[invalid-argument-type]
+        )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"led_intensity_mode": LedIntensityMode.AUTO},
+        {"led_intensity_manual": 100},
+    ],
+    ids=["mode", "manual"],
+)
+def test_led_brightness_shorthand_rejects_conflicts(kwargs: dict[str, object]) -> None:
+    """Test the LED shorthand refuses to silently overwrite what you set."""
+    with pytest.raises(ValueError, match="not both"):
+        PeblarSetUserConfiguration(
+            led_brightness=LedBrightness.AUTOMATIC,
+            **kwargs,  # ty: ignore[invalid-argument-type]
+        )
+
+
+def test_smart_charging_model_rejects_conflicts() -> None:
+    """Test the same guard applies to the smart charging payload."""
+    with pytest.raises(ValueError, match="not both"):
+        PeblarSmartCharging(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            solar_charging_enable=True,
+        )
+
+
+def test_shorthand_and_low_level_fields_work_on_their_own() -> None:
+    """Test the guard only fires on a genuine overlap."""
+    assert orjson.loads(
+        PeblarSetUserConfiguration(led_brightness=LedBrightness.MEDIUM).to_json()
+    ) == {"HmiLedIntensityManual": 22, "HmiLedIntensityMode": "Fixed"}
+    assert orjson.loads(
+        PeblarSetUserConfiguration(led_intensity_manual=50).to_json()
+    ) == {"HmiLedIntensityManual": 50}
+    assert orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            buzzer_volume=SoundVolume.LOW,
+        ).to_json()
+    ) == {
+        "HmiBuzzerVolume": 1,
+        "ScheduledChargingEnable": True,
+        "SolarChargingEnable": False,
+    }

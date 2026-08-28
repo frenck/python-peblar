@@ -93,6 +93,25 @@ def resolve_led_brightness(
     return LedIntensityMode.FIXED, level.value
 
 
+def reject_conflicting_fields(
+    ui_field: str,
+    driven: dict[str, object],
+) -> None:
+    """Refuse a UI shorthand alongside the fields it expands into.
+
+    The shorthand overwrites those fields, so accepting both would mean
+    silently discarding half of what the caller asked for.
+    """
+    if conflicting := sorted(
+        name for name, value in driven.items() if value is not None
+    ):
+        msg = (
+            f"Set either {ui_field} or {', '.join(conflicting)}, not both: "
+            f"{ui_field} overwrites them"
+        )
+        raise ValueError(msg)
+
+
 class BaseModel(DataClassORJSONMixin):
     """Base model for all Peblar models."""
 
@@ -640,6 +659,14 @@ class PeblarSetUserConfiguration(BaseModel):
     def __post_init__(self) -> None:
         """Post init hook for PeblarSetUserConfiguration object."""
         if self.smart_charging is not None:
+            reject_conflicting_fields(
+                "smart_charging",
+                {
+                    "scheduled_charging_enabled": self.scheduled_charging_enabled,
+                    "solar_charging_enabled": self.solar_charging_enabled,
+                    "solar_charging_mode": self.solar_charging_mode,
+                },
+            )
             (
                 self.scheduled_charging_enabled,
                 self.solar_charging_enabled,
@@ -650,6 +677,13 @@ class PeblarSetUserConfiguration(BaseModel):
                 self.solar_charging_mode = solar_charging_mode
 
         if self.led_brightness is not None:
+            reject_conflicting_fields(
+                "led_brightness",
+                {
+                    "led_intensity_mode": self.led_intensity_mode,
+                    "led_intensity_manual": self.led_intensity_manual,
+                },
+            )
             self.led_intensity_mode, self.led_intensity_manual = resolve_led_brightness(
                 self.led_brightness
             )
@@ -678,6 +712,15 @@ class PeblarSmartCharging(BaseModel):
         """Post init hook for PeblarSmartCharging object."""
         if self.smart_charging is None:
             return
+
+        reject_conflicting_fields(
+            "smart_charging",
+            {
+                "scheduled_charging_enable": self.scheduled_charging_enable,
+                "solar_charging_enable": self.solar_charging_enable,
+                "solar_charging_mode": self.solar_charging_mode,
+            },
+        )
 
         (
             self.scheduled_charging_enable,
