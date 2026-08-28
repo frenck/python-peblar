@@ -21,8 +21,10 @@ from peblar.exceptions import (
 )
 from peblar.models import (
     PeblarConnector,
+    PeblarEnergyHistory,
     PeblarHealth,
     PeblarMeter,
+    PeblarScheduledCharging,
     PeblarSystem,
     PeblarSystemInformation,
     PeblarUserConfiguration,
@@ -520,5 +522,25 @@ def test_status(runner: CliRunner, snapshot: SnapshotAssertion) -> None:
         web_interface_mode="dashboard",
     )
     exit_code, output = _invoke(runner, ["status", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert output == snapshot
+
+
+def test_schedule(runner: CliRunner, snapshot: SnapshotAssertion) -> None:
+    """Schedule command renders the local charging schedule."""
+    schedule = PeblarScheduledCharging.from_json(
+        load_fixture("scheduled_charging.json")
+    )
+    mock_cls = _mock_peblar(login=None, scheduled_charging=schedule)
+    exit_code, output = _invoke(runner, ["schedule", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert output == snapshot
+
+
+def test_history(runner: CliRunner, snapshot: SnapshotAssertion) -> None:
+    """History command renders the energy history."""
+    history = PeblarEnergyHistory.from_json(load_fixture("energy_history.json"))
+    mock_cls = _mock_peblar(login=None, energy_history=history)
+    exit_code, output = _invoke(runner, ["history", *_AUTH], mock_cls)
     assert exit_code == 0
     assert output == snapshot

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import orjson
@@ -874,6 +875,107 @@ class PeblarMeterHistory(BaseModel):
     session: list[PeblarMeterHistorySession] = field(
         metadata=field_options(alias="Session")
     )
+
+
+@dataclass(kw_only=True)
+class PeblarSessionGraphPoint(BaseModel):
+    """Single measurement in the charging session graph.
+
+    Note the charger uses camelCase on this endpoint, unlike the rest of
+    the web API.
+    """
+
+    average_power: list[int] = field(metadata=field_options(alias="averagePower"))
+    """Average power per phase, in Watts."""
+
+    timestamp: datetime = field(metadata=field_options(alias="timestamp"))
+
+    @property
+    def average_power_total(self) -> int:
+        """Return the average power over all phases, in Watts."""
+        return sum(self.average_power)
+
+
+@dataclass(kw_only=True)
+class PeblarSessionGraph(BaseModel):
+    """Object holding the power graph of the current or last charging session.
+
+    The charger returns the measurements newest first.
+    """
+
+    data: list[PeblarSessionGraphPoint] = field(metadata=field_options(alias="data"))
+
+
+@dataclass(kw_only=True)
+class PeblarEnergyHistoryMonth(BaseModel):
+    """Energy delivered per day within a single month, in Wh."""
+
+    energy: list[int] = field(metadata=field_options(alias="Energy"))
+    """One entry per day of the month."""
+
+    month: int = field(metadata=field_options(alias="Month"))
+    year: int = field(metadata=field_options(alias="Year"))
+
+
+@dataclass(kw_only=True)
+class PeblarEnergyHistoryYear(BaseModel):
+    """Energy delivered per month within a single year, in Wh."""
+
+    energy: list[int] = field(metadata=field_options(alias="Energy"))
+    """One entry per month of the year."""
+
+    year: int = field(metadata=field_options(alias="Year"))
+
+
+@dataclass(kw_only=True)
+class PeblarEnergyHistory(BaseModel):
+    """Object holding the long term energy history of the charger."""
+
+    months: list[PeblarEnergyHistoryMonth] = field(
+        metadata=field_options(alias="HistoryMonth")
+    )
+    years: list[PeblarEnergyHistoryYear] = field(
+        metadata=field_options(alias="HistoryYear")
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarScheduleSlot(BaseModel):
+    """Single slot in the local charging schedule."""
+
+    current_limit: int = field(metadata=field_options(alias="CurrentLimit"))
+    """Charge current limit for this slot, in Amperes. Zero means no charging."""
+
+    start_time: int = field(metadata=field_options(alias="StartTime"))
+    """Start of the slot, in minutes since midnight."""
+
+
+@dataclass(kw_only=True)
+class PeblarScheduledCharging(BaseModel):
+    """Object holding the local charging schedule, one list per weekday."""
+
+    monday: list[PeblarScheduleSlot] = field(metadata=field_options(alias="Monday"))
+    tuesday: list[PeblarScheduleSlot] = field(metadata=field_options(alias="Tuesday"))
+    wednesday: list[PeblarScheduleSlot] = field(
+        metadata=field_options(alias="Wednesday")
+    )
+    thursday: list[PeblarScheduleSlot] = field(metadata=field_options(alias="Thursday"))
+    friday: list[PeblarScheduleSlot] = field(metadata=field_options(alias="Friday"))
+    saturday: list[PeblarScheduleSlot] = field(metadata=field_options(alias="Saturday"))
+    sunday: list[PeblarScheduleSlot] = field(metadata=field_options(alias="Sunday"))
+
+    @property
+    def by_weekday(self) -> dict[int, list[PeblarScheduleSlot]]:
+        """Return the schedule keyed the way datetime.weekday() numbers days."""
+        return {
+            0: self.monday,
+            1: self.tuesday,
+            2: self.wednesday,
+            3: self.thursday,
+            4: self.friday,
+            5: self.saturday,
+            6: self.sunday,
+        }
 
 
 @dataclass(kw_only=True)

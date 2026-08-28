@@ -72,6 +72,11 @@
       'password',
       'quiet',
     ]),
+    'history': list([
+      'host',
+      'password',
+      'quiet',
+    ]),
     'household-limit': list([
       'disable',
       'enable',
@@ -135,6 +140,11 @@
       'quiet',
     ]),
     'scan': list([
+      'quiet',
+    ]),
+    'schedule': list([
+      'host',
+      'password',
       'quiet',
     ]),
     'smart-charging': list([
@@ -264,6 +274,21 @@
   
   '''
 # ---
+# name: test_history
+  '''
+  Peblar energy history 
+  ┏━━━━━━━━━┳━━━━━━━━━━┓
+  ┃ Period  ┃   Energy ┃
+  ┡━━━━━━━━━╇━━━━━━━━━━┩
+  │ 2025    │  0.0 kWh │
+  │ 2026    │ 12.5 kWh │
+  ├─────────┼──────────┤
+  │ 2026-07 │  0.0 kWh │
+  │ 2026-08 │ 12.5 kWh │
+  └─────────┴──────────┘
+  
+  '''
+# ---
 # name: test_household_limit_show
   '''
      Peblar household power limit    
@@ -360,6 +385,23 @@
   │     Give it a moment and try again.                                         │
   │                                                                             │
   ╰─────────────────────────────────────────────────────────────────────────────╯
+  
+  '''
+# ---
+# name: test_schedule
+  '''
+            Peblar charging schedule          
+  ┏━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Day       ┃ From  ┃ Charge current limit ┃
+  ┡━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
+  │ Monday    │ 00:00 │ No charging          │
+  │ Tuesday   │ 00:00 │ No charging          │
+  │ Wednesday │ 00:00 │ No charging          │
+  │ Thursday  │ 00:00 │ No charging          │
+  │ Friday    │ 00:00 │ No charging          │
+  │ Saturday  │ 00:00 │ No charging          │
+  │ Sunday    │ 00:00 │ No charging          │
+  └───────────┴───────┴──────────────────────┘
   
   '''
 # ---
