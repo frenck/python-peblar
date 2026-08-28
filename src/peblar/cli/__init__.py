@@ -559,13 +559,17 @@ def rate_limit_error_handler(_: PeblarRateLimitError) -> None:
 
 @cli.error_handler(PeblarUnsupportedFirmwareVersionError)
 def unsupported_firmware_version_error_handler(
-    _: PeblarUnsupportedFirmwareVersionError,
+    error: PeblarUnsupportedFirmwareVersionError,
 ) -> None:
     """Handle unsupported version errors."""
-    message = """
+    message = f"""
     The specified Peblar charger is running an unsupported firmware version.
 
-    The tooling currently only supports firmware versions XXX and higher.
+    {error}
+
+    Update the charger and try again:
+
+    peblar update
     """
     panel = Panel(
         message,
@@ -1863,6 +1867,66 @@ async def ev(
     )
 
     console.print(table)
+
+
+@cli.command("authorize")
+async def authorize(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    uid: Annotated[
+        str | None,
+        typer.Option(
+            help="RFID token UID from the standalone auth list",
+            show_default=False,
+        ),
+    ] = None,
+    name: Annotated[
+        str | None,
+        typer.Option(
+            help="RFID token description from the standalone auth list",
+            show_default=False,
+        ),
+    ] = None,
+    quiet: Annotated[bool, QUIET_OPTION] = False,
+) -> None:
+    """Authorize or deauthorize the running charge session.
+
+    Presents a token from the standalone auth list as if it were held
+    against the reader. The charger toggles: it authorizes an unauthorized
+    session and stops an authorized one.
+    """
+    if (uid is None) == (name is None):
+        msg = "Provide either --uid or --name, but not both."
+        raise typer.BadParameter(msg)
+
+    status_ctx = (
+        contextlib.nullcontext()
+        if quiet
+        else console.status("[cyan]Presenting token...", spinner="toggle12")
+    )
+    with status_ctx:
+        async with Peblar(host=host) as peblar:
+            await peblar.login(password=password)
+            async with await peblar.rest_api() as api:
+                await api.authorize_charge_session(token=uid, name=name)
+    print_cli_success(quiet=quiet, message="✅[green]Success!")
 
 
 @cli.command("health")

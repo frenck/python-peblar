@@ -14,6 +14,7 @@ from mashumaro.types import SerializationStrategy
 
 from .const import (
     AccessMode,
+    AuthorizationMethod,
     ChargeLimiter,
     CPState,
     LedBrightness,
@@ -219,6 +220,28 @@ class PeblarRfidToken(BaseModel):
     rfid_token_description: str = field(
         metadata=field_options(alias="RfidTokenDescription")
     )
+
+
+@dataclass(kw_only=True)
+class PeblarChargeSessionAuthorization(BaseModel):
+    """Object holding the charge session (de)authorization payload.
+
+    The charger looks the token up in the standalone auth list, either by
+    its UID or by the description it was stored under. Exactly one of the
+    two is required.
+    """
+
+    method: AuthorizationMethod = field(
+        default=AuthorizationMethod.RFID, metadata=field_options(alias="Method")
+    )
+    token: str | None = field(default=None, metadata=field_options(alias="Token"))
+    name: str | None = field(default=None, metadata=field_options(alias="Name"))
+
+    def __post_init__(self) -> None:
+        """Post init hook for PeblarChargeSessionAuthorization object."""
+        if (self.token is None) == (self.name is None):
+            msg = "Provide either a token UID or a token name, but not both"
+            raise ValueError(msg)
 
 
 @dataclass(kw_only=True)
@@ -849,6 +872,20 @@ class PeblarEVInterfaceChange(BaseModel):
     force_single_phase: bool | None = field(
         default=None, metadata=field_options(alias="Force1Phase")
     )
+
+
+@dataclass(kw_only=True)
+class PeblarEVInterfaceReplace(BaseModel):
+    """Object holding the complete EV interface configuration payload.
+
+    Unlike a change payload, the charger rejects a replacement that leaves
+    any writable field out, so both fields are required here.
+    """
+
+    charge_current_limit: int = field(
+        metadata=field_options(alias="ChargeCurrentLimit")
+    )
+    force_single_phase: bool = field(metadata=field_options(alias="Force1Phase"))
 
 
 @dataclass(kw_only=True)

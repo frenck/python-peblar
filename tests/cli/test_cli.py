@@ -450,3 +450,60 @@ def test_config_on_older_firmware_shows_no_literal_none(
     # The parameter blob defaults to an empty dict, not None, so it renders
     # blank instead of "N/A"; every other absent setting shows "N/A".
     assert output.count("N/A") == len(NEWER_USER_CONFIGURATION_KEYS) - 1
+
+
+def test_authorize_by_uid(runner: CliRunner) -> None:
+    """Authorize command presents a token by its UID."""
+    mock_cls = _mock_peblar_with_api({"authorize_charge_session": None}, login=None)
+    exit_code, output = _invoke(
+        runner, ["authorize", *_AUTH, "--uid", "0123456789ABCD"], mock_cls
+    )
+    assert exit_code == 0
+    assert "Success" in output
+
+
+def test_authorize_by_name(runner: CliRunner) -> None:
+    """Authorize command presents a token by its description."""
+    mock_cls = _mock_peblar_with_api({"authorize_charge_session": None}, login=None)
+    exit_code, output = _invoke(
+        runner, ["authorize", *_AUTH, "--name", "My RFID Card"], mock_cls
+    )
+    assert exit_code == 0
+    assert "Success" in output
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        [],
+        ["--uid", "0123456789ABCD", "--name", "My RFID Card"],
+    ],
+    ids=["neither", "both"],
+)
+def test_authorize_requires_exactly_one_identifier(
+    runner: CliRunner,
+    args: list[str],
+) -> None:
+    """Authorize command rejects zero or two token identifiers."""
+    mock_cls = _mock_peblar_with_api({"authorize_charge_session": None}, login=None)
+    exit_code, output = _invoke(runner, ["authorize", *_AUTH, *args], mock_cls)
+    assert exit_code != 0
+    assert "not both" in output
+
+
+def test_unsupported_firmware_handler_shows_the_versions(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The firmware panel shows what the charger runs, not a placeholder."""
+    handler = cli.error_handlers[PeblarUnsupportedFirmwareVersionError]
+    with pytest.raises(SystemExit):
+        handler(
+            PeblarUnsupportedFirmwareVersionError(
+                "The local REST API requires firmware 1.6 or later, "
+                "this charger runs 1.5.0."
+            )
+        )
+    output = capsys.readouterr().out
+    assert "1.6" in output
+    assert "1.5.0" in output
+    assert "XXX" not in output
