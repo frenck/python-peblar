@@ -18,6 +18,7 @@ from peblar.exceptions import (
     PeblarConnectionTimeoutError,
     PeblarError,
 )
+from peblar.models import PeblarFirmwareUpdateStatus
 from peblar.websocket import PeblarWebsocket, session_status_topic
 
 if TYPE_CHECKING:
@@ -93,6 +94,18 @@ async def peblar_ws_handler(request: web.Request) -> web.WebSocketResponse:
         if action == "subscribe" and topic == SESSION_TOPIC:
             await websocket.send_json(
                 {"topic": topic, "type": "event", "data": SESSION_EVENT}
+            )
+        if action == "subscribe" and topic == WebsocketTopic.FIRMWARE_UPDATE_STATUS:
+            await websocket.send_json(
+                {
+                    "topic": topic,
+                    "type": "event",
+                    "data": {
+                        "status": "EFwUpdateSuccess",
+                        "fwIdentOld": "1.9.1+1+WL-1",
+                        "fwIdentNew": "1.9.2+1+WL-1",
+                    },
+                }
             )
         if action == "subscribe" and topic == WebsocketTopic.RFID_TOKEN_FOUND:
             await websocket.send_json(
@@ -580,3 +593,34 @@ async def test_cancelling_listen_still_cancels_the_caller(
 
     # The connection is untouched, listening is only observing.
     assert websocket.connected is True
+
+
+async def test_subscribe_firmware_update_status(websocket: PeblarWebsocket) -> None:
+    """Test firmware update progress events are parsed.
+
+    The charger replays the result of the last update on subscribe, so
+    this arrives without an update having been triggered.
+    """
+    received: list[PeblarFirmwareUpdateStatus] = []
+    arrived = asyncio.Event()
+
+    def collect(status: PeblarFirmwareUpdateStatus) -> None:
+        received.append(status)
+        arrived.set()
+
+    await websocket.connect()
+    await websocket.subscribe_firmware_update_status(collect)
+
+    async with asyncio.timeout(5):
+        await arrived.wait()
+
+    assert received[0].status == "EFwUpdateSuccess"
+    assert received[0].firmware_old == "1.9.1+1+WL-1"
+    assert received[0].firmware_new == "1.9.2+1+WL-1"
+
+
+def test_firmware_update_status_version_fields_are_optional() -> None:
+    """Test a status without version identifiers still parses."""
+    status = PeblarFirmwareUpdateStatus.from_dict({"status": "Unknown"})
+    assert status.firmware_old == ""
+    assert status.firmware_new == ""

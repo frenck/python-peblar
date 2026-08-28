@@ -309,10 +309,17 @@ class Peblar:
         result = await self.request(url)
         return PeblarApiToken.from_json(result).api_token
 
-    async def available_versions(self) -> PeblarVersions:
-        """Get available versions."""
+    async def available_versions(self, *, use_cache: bool = True) -> PeblarVersions:
+        """Get available versions.
+
+        The charger caches what it last heard from Peblar's update
+        servers. Pass use_cache=False to make it go and ask again, which
+        is what you want while waiting for an update to land.
+        """
         result = await self.request(
-            URL("system/software/automatic-update/available-versions")
+            URL("system/software/automatic-update/available-versions").with_query(
+                {"UseCache": "true" if use_cache else "false"}
+            )
         )
         return PeblarVersions.from_json(result)
 
@@ -477,7 +484,14 @@ class Peblar:
         )
 
     async def update(self, *, package_type: PackageType) -> None:
-        """Update the Peblar charger to the latest version."""
+        """Update the Peblar charger to the latest version.
+
+        One package at a time, in PACKAGE_UPDATE_ORDER: the charger wants
+        Customization before Firmware. It reboots on its own afterwards,
+        so this returns long before the update is done. Subscribe to
+        PeblarWebsocket.subscribe_firmware_update_status() first to
+        follow along.
+        """
         await self.request(
             URL("system/software/automatic-update/update"),
             method=hdrs.METH_POST,

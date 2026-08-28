@@ -1036,6 +1036,25 @@ class PeblarSessionStatus(BaseModel):
 
 
 @dataclass(kw_only=True)
+class PeblarFirmwareUpdateStatus(BaseModel):
+    """Object holding the progress of a running firmware update.
+
+    Pushed over the websocket while the charger updates itself. The
+    charger hangs on to the result of the last update, so subscribing
+    also tells you how the previous one went.
+
+    Peblar does not document the status values. `EFwUpdateSuccess` is one
+    observed in the wild; the charger's web interface only ever falls
+    back to "Unknown" of its own accord. That is too thin a basis for an
+    enum, so this stays a plain string.
+    """
+
+    status: str = field(metadata=field_options(alias="status"))
+    firmware_old: str = field(default="", metadata=field_options(alias="fwIdentOld"))
+    firmware_new: str = field(default="", metadata=field_options(alias="fwIdentNew"))
+
+
+@dataclass(kw_only=True)
 class PeblarTokenFound(BaseModel):
     """Object holding an RFID or vehicle token event."""
 
