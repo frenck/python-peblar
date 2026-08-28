@@ -1207,3 +1207,122 @@ def test_parameter_blob_shapes(blob: object, expected: dict[str, str]) -> None:
     data["BopSourceParameters"] = blob
     config = PeblarUserConfiguration.from_dict(data)
     assert config.bop_source_parameters == expected
+
+
+# ---------------------------------------------------------------------------
+# Expanded user configuration payload
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        (
+            SmartChargingMode.DEFAULT,
+            {"ScheduledChargingEnable": False, "SolarChargingEnable": False},
+        ),
+        (
+            SmartChargingMode.SCHEDULED,
+            {"ScheduledChargingEnable": True, "SolarChargingEnable": False},
+        ),
+        (
+            SmartChargingMode.FAST_SOLAR,
+            {
+                "ScheduledChargingEnable": False,
+                "SolarChargingEnable": True,
+                "SolarChargingMode": "MaxSolar",
+            },
+        ),
+        (
+            SmartChargingMode.SMART_SOLAR,
+            {
+                "ScheduledChargingEnable": False,
+                "SolarChargingEnable": True,
+                "SolarChargingMode": "OptimizedSolar",
+            },
+        ),
+        (
+            SmartChargingMode.PURE_SOLAR,
+            {
+                "ScheduledChargingEnable": False,
+                "SolarChargingEnable": True,
+                "SolarChargingMode": "PureSolar",
+            },
+        ),
+    ],
+)
+def test_set_user_configuration_smart_charging(
+    mode: SmartChargingMode,
+    expected: dict[str, object],
+) -> None:
+    """Test the UI smart charging mode expands into the charger's fields."""
+    payload = PeblarSetUserConfiguration(smart_charging=mode)
+    assert orjson.loads(payload.to_json()) == expected
+
+
+@pytest.mark.parametrize(
+    ("brightness", "expected"),
+    [
+        (LedBrightness.AUTOMATIC, {"HmiLedIntensityMode": "Auto"}),
+        (
+            LedBrightness.OFF,
+            {"HmiLedIntensityMode": "Fixed", "HmiLedIntensityManual": 0},
+        ),
+        (
+            LedBrightness.MEDIUM,
+            {"HmiLedIntensityMode": "Fixed", "HmiLedIntensityManual": 22},
+        ),
+        (
+            LedBrightness.BRIGHT,
+            {"HmiLedIntensityMode": "Fixed", "HmiLedIntensityManual": 100},
+        ),
+    ],
+)
+def test_set_user_configuration_led_brightness(
+    brightness: LedBrightness,
+    expected: dict[str, object],
+) -> None:
+    """Test the UI LED brightness expands into the charger's fields."""
+    payload = PeblarSetUserConfiguration(led_brightness=brightness)
+    assert orjson.loads(payload.to_json()) == expected
+
+
+def test_set_user_configuration_omits_untouched_fields() -> None:
+    """Test only the settings you actually set reach the charger."""
+    payload = PeblarSetUserConfiguration(user_defined_charge_limit_current=10)
+    assert orjson.loads(payload.to_json()) == {"UserDefinedChargeLimitCurrent": 10}
+
+
+async def test_update_user_configuration_multiple_settings() -> None:
+    """Test a single update can carry several settings at once."""
+    with aioresponses() as mocked:
+        mocked.patch(USER_CONFIG_URL, status=200, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.update_user_configuration(
+                PeblarSetUserConfiguration(
+                    buzzer_volume=SoundVolume.LOW,
+                    user_defined_charge_limit_current=10,
+                    user_keep_socket_locked=True,
+                    modbus_server_access_mode=AccessMode.READ_ONLY,
+                ),
+            )
+
+    requests = mocked.requests
+    assert requests is not None
+    call = next(iter(requests.values()))[0]
+    assert orjson.loads(call.kwargs["data"]) == {
+        "HmiBuzzerVolume": 1,
+        "ModbusServerAccessMode": "ReadOnly",
+        "UserDefinedChargeLimitCurrent": 10,
+        "UserKeepSocketLocked": True,
+    }
+
+
+def test_set_user_configuration_ui_fields_are_not_sent() -> None:
+    """Test the replicated UI fields never reach the wire themselves."""
+    payload = orjson.loads(
+        PeblarSetUserConfiguration(
+            smart_charging=SmartChargingMode.SCHEDULED,
+            led_brightness=LedBrightness.OFF,
+        ).to_json()
+    )
+    assert "smart_charging" not in payload
+    assert "led_brightness" not in payload
