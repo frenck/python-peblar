@@ -10,6 +10,7 @@ from aiohttp import ClientConnectionError, ClientSession
 from aioresponses import aioresponses
 from yarl import URL
 
+import peblar as peblar_package
 from peblar import Peblar
 from peblar.const import (
     PACKAGE_UPDATE_ORDER,
@@ -1910,3 +1911,20 @@ def test_package_update_order() -> None:
         "Customization",
         "Firmware",
     ]
+
+
+def test_public_signatures_are_importable() -> None:
+    """Every type a public method needs is importable from the package.
+
+    Peblar.update() takes a PackageType and meter_history() returns a
+    PeblarMeterHistory. Both were reachable only through peblar.const and
+    peblar.models, which left callers importing from modules that are not
+    the public surface.
+    """
+    exported = set(peblar_package.__all__)
+    assert {"PackageType", "PeblarMeterHistory"} <= exported
+    assert {member.value for member in peblar_package.PackageType} == {
+        "Firmware",
+        "Customization",
+    }
+    assert set(peblar_package.PACKAGE_UPDATE_ORDER) <= set(peblar_package.PackageType)
