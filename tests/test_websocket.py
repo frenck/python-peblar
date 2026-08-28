@@ -364,3 +364,61 @@ async def test_one_in_flight_request_per_topic(
     first.cancel()
     with pytest.raises(asyncio.CancelledError):
         await first
+
+
+async def test_a_raising_callback_is_visible_not_silent(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test a callback that raises does not leave a zombie connection.
+
+    One reader serves every subscription, so a raising callback stops
+    them all. That has to be observable rather than leaving `connected`
+    claiming everything is fine.
+    """
+    await websocket.connect()
+
+    def boom(_data: dict[str, Any]) -> None:
+        msg = "consumer bug"
+        raise RuntimeError(msg)
+
+    await websocket.subscribe_session_status(lambda _: boom({}))
+    await asyncio.sleep(0.05)
+
+    assert websocket.connected is False
+    with pytest.raises(RuntimeError, match="consumer bug"):
+        await websocket.listen()
+
+
+async def test_disconnect_never_raises(websocket: PeblarWebsocket) -> None:
+    """Test teardown stays safe even when the reader died of something.
+
+    disconnect() gets called from `finally` blocks and context manager
+    exits, so it must not resurrect whatever killed the reader.
+    """
+    await websocket.connect()
+
+    def boom(_data: dict[str, Any]) -> None:
+        msg = "consumer bug"
+        raise RuntimeError(msg)
+
+    await websocket.subscribe_session_status(lambda _: boom({}))
+    await asyncio.sleep(0.05)
+
+    await websocket.disconnect()
+    assert websocket.connected is False
+
+
+async def test_context_manager_exit_survives_a_dead_reader(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test `async with` unwinds cleanly after a callback blew up."""
+
+    def boom(_data: dict[str, Any]) -> None:
+        msg = "consumer bug"
+        raise RuntimeError(msg)
+
+    async with websocket as connected:
+        await connected.subscribe_session_status(lambda _: boom({}))
+        await asyncio.sleep(0.05)
+
+    assert websocket.connected is False

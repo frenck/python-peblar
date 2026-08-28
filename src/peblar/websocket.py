@@ -57,8 +57,17 @@ class PeblarWebsocket:
 
     @property
     def connected(self) -> bool:
-        """Return whether the websocket is currently connected."""
-        return self._client is not None and not self._client.closed
+        """Return whether the websocket is up and dispatching events.
+
+        A reader that has stopped means nothing reaches the callbacks any
+        more, so an open socket on its own does not count as connected.
+        """
+        return (
+            self._client is not None
+            and not self._client.closed
+            and self._reader is not None
+            and not self._reader.done()
+        )
 
     async def connect(self) -> None:
         """Open the websocket connection to the charger."""
@@ -78,6 +87,11 @@ class PeblarWebsocket:
 
         The callback receives the raw event payload. For the topics with a
         known shape, prefer the typed helpers below.
+
+        Keep the callback from raising. One reader serves every
+        subscription on the connection, so an exception escaping a
+        callback stops all of them; listen() re-raises it and connected
+        turns False, but the connection is gone either way.
         """
         # Registered before subscribing, not after: the charger pushes the
         # current state immediately behind the acknowledgement, and that
@@ -142,8 +156,10 @@ class PeblarWebsocket:
         """Close the websocket connection."""
         if self._reader is not None:
             self._reader.cancel()
-            # The reader owns the socket, so let it finish unwinding first.
-            with contextlib.suppress(asyncio.CancelledError):
+            # The reader owns the socket, so let it finish unwinding
+            # first. Whatever it died of is reported by listen(), never by
+            # teardown, which has to stay safe to call from a finally.
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._reader
             self._reader = None
 
