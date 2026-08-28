@@ -1,5 +1,6 @@
 """Tests for `peblar.websocket`."""
 
+# pylint: disable=redefined-outer-name
 from __future__ import annotations
 
 import asyncio
@@ -23,6 +24,7 @@ SESSION_TOPIC = session_status_topic()
 REJECTED_TOPIC = "/nope"
 SILENT_TOPIC = "/silent"
 BINARY_TOPIC = "/binary"
+GARBAGE_TOPIC = "/garbage"
 SESSION_EVENT = {
     "meterData": {
         "instantaneousPower": [3450, 3410, 3480],
@@ -72,6 +74,15 @@ async def peblar_ws_handler(request: web.Request) -> web.WebSocketResponse:
 
         if action == "subscribe" and topic == BINARY_TOPIC:
             await websocket.send_bytes(b"not text")
+
+        if action == "subscribe" and topic == GARBAGE_TOPIC:
+            # Not JSON at all, then valid JSON that is not an object, then
+            # a well formed message whose data is null.
+            await websocket.send_str("}{ not json")
+            await websocket.send_str("[1, 2, 3]")
+            await websocket.send_json(
+                {"topic": GARBAGE_TOPIC, "type": "event", "data": None}
+            )
 
         # The real charger pushes current state right behind the ack.
         if action == "subscribe" and topic == SESSION_TOPIC:
@@ -310,3 +321,46 @@ async def test_async_context_manager(websocket: PeblarWebsocket) -> None:
     async with websocket as connected:
         assert connected.connected is True
     assert websocket.connected is False
+
+
+async def test_malformed_frames_do_not_kill_the_reader(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test junk on the wire is skipped rather than ending every subscription.
+
+    The reader task serves every subscription on the connection, so an
+    exception in it would silently stop all of them.
+    """
+    received: list[dict[str, Any]] = []
+    await websocket.connect()
+    await websocket.subscribe(GARBAGE_TOPIC, received.append)
+    await asyncio.sleep(0.05)
+
+    # Still alive, and the null data arrived normalised to an empty dict.
+    assert websocket.connected is True
+    assert received == [{}]
+
+    # And the connection still works afterwards.
+    await websocket.subscribe_session_status(lambda _: None)
+
+
+async def test_one_in_flight_request_per_topic(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test a second request for a topic cannot orphan the first one.
+
+    Both used to write into the same pending slot, so one caller would
+    wait forever for a result that had already been handed to the other.
+    """
+    await websocket.connect()
+    websocket.request_timeout = 5
+
+    first = asyncio.create_task(websocket.subscribe(SILENT_TOPIC, lambda _: None))
+    await asyncio.sleep(0.05)
+
+    with pytest.raises(PeblarError, match="already in flight"):
+        await websocket.subscribe(SILENT_TOPIC, lambda _: None)
+
+    first.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await first

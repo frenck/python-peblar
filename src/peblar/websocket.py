@@ -159,6 +159,10 @@ class PeblarWebsocket:
             msg = "Not connected to the Peblar charger websocket"
             raise PeblarError(msg)
 
+        if topic in self._pending:
+            msg = f"A request for topic {topic} is already in flight"
+            raise PeblarError(msg)
+
         future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         self._pending[topic] = future
 
@@ -184,7 +188,16 @@ class PeblarWebsocket:
             async for message in self._client:
                 if message.type is not WSMsgType.TEXT:
                     continue
-                self._handle_message(message.json())
+
+                # Anything unparseable is skipped rather than allowed to
+                # kill the reader, which would silently stop every
+                # subscription on this connection.
+                try:
+                    payload = message.json()
+                except ValueError:
+                    continue
+
+                self._handle_message(payload)
         finally:
             # Nobody is going to answer a pending subscribe any more.
             for future in self._pending.values():
@@ -195,13 +208,23 @@ class PeblarWebsocket:
                         )
                     )
 
-    def _handle_message(self, message: dict[str, Any]) -> None:
-        """Route a single message to a pending request or a subscriber."""
+    def _handle_message(self, message: Any) -> None:
+        """Route a single message to a pending request or a subscriber.
+
+        Nothing in here trusts the shape of what arrived. A surprising
+        payload gets dropped, because raising would end the reader task
+        and take every subscription down with it.
+        """
+        if not isinstance(message, dict):
+            return
+
         topic = message.get("topic")
         if not topic:
             return
 
-        data = message.get("data", {})
+        data = message.get("data")
+        if not isinstance(data, dict):
+            data = {}
 
         if message.get("type") == "result":
             if (future := self._pending.get(topic)) and not future.done():
