@@ -2258,8 +2258,9 @@ async def schedule(
     table.add_column("From", style="bold")
     table.add_column("Charge current limit", style="bold")
 
+    by_weekday = scheduled.by_weekday
     for index, day in enumerate(WEEKDAY_NAMES):
-        slots = scheduled.by_weekday[index]
+        slots = by_weekday[index]
         if not slots:
             table.add_row(day, "-", "No schedule")
             continue
