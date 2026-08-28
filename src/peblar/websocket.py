@@ -177,6 +177,7 @@ class PeblarWebsocket:
             self._client = None
 
         self._callbacks.clear()
+        self._pending.clear()
 
     async def _send_action(self, action: str, topic: str) -> None:
         """Send a subscribe or unsubscribe request and wait for the result."""
@@ -197,7 +198,7 @@ class PeblarWebsocket:
                 await future
         except TimeoutError as exception:
             msg = f"Timeout on the {action} request for topic {topic}"
-            raise PeblarConnectionError(msg) from exception
+            raise PeblarConnectionTimeoutError(msg) from exception
         except (ClientError, OSError, RuntimeError) as exception:
             msg = f"Error occurred during the {action} request for topic {topic}"
             raise PeblarConnectionError(msg) from exception

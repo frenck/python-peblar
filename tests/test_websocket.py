@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -12,7 +13,11 @@ from aiohttp.test_utils import TestServer
 from yarl import URL
 
 from peblar.const import SessionState, WebsocketTopic
-from peblar.exceptions import PeblarConnectionError, PeblarError
+from peblar.exceptions import (
+    PeblarConnectionError,
+    PeblarConnectionTimeoutError,
+    PeblarError,
+)
 from peblar.websocket import PeblarWebsocket, session_status_topic
 
 if TYPE_CHECKING:
@@ -272,7 +277,9 @@ async def test_subscribe_times_out(websocket: PeblarWebsocket) -> None:
     """Test a charger that never acknowledges surfaces as a timeout."""
     websocket.request_timeout = 0.1
     await websocket.connect()
-    with pytest.raises(PeblarConnectionError, match="Timeout on the subscribe request"):
+    with pytest.raises(
+        PeblarConnectionTimeoutError, match="Timeout on the subscribe request"
+    ):
         await websocket.subscribe(SILENT_TOPIC, lambda _: None)
 
 
@@ -512,3 +519,31 @@ async def test_a_failing_close_does_not_mask_the_real_error(
 
     # And teardown still does not raise.
     await websocket.disconnect()
+
+
+async def test_disconnect_clears_in_flight_bookkeeping(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test a reconnect is not blocked by the previous connection.
+
+    The in-flight guard rejects a second request for a topic, so a
+    disconnect during an unanswered request has to drop that bookkeeping
+    or the first request after reconnecting is refused on behalf of a
+    connection that no longer exists.
+    """
+    await websocket.connect()
+
+    pending = asyncio.create_task(websocket.subscribe(SILENT_TOPIC, lambda _: None))
+    await asyncio.sleep(0.05)
+    assert websocket._pending  # pylint: disable=protected-access
+
+    await websocket.disconnect()
+    pending.cancel()
+    with contextlib.suppress(asyncio.CancelledError, PeblarError):
+        await pending
+
+    assert not websocket._pending  # pylint: disable=protected-access
+
+    # Reconnecting and asking for the same topic again is fine.
+    await websocket.connect()
+    await websocket.subscribe_session_status(lambda _: None)
