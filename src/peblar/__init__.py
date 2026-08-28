@@ -22,6 +22,8 @@ from .exceptions import (
     PeblarUnsupportedFirmwareVersionError,
 )
 from .models import (
+    PeblarAuthStatus,
+    PeblarConnector,
     PeblarEVInterface,
     PeblarHealth,
     PeblarMeter,
@@ -44,10 +46,12 @@ __all__ = [
     "LedIntensityMode",
     "Peblar",
     "PeblarApi",
+    "PeblarAuthStatus",
     "PeblarAuthenticationError",
     "PeblarBadRequestError",
     "PeblarConnectionError",
     "PeblarConnectionTimeoutError",
+    "PeblarConnector",
     "PeblarEVInterface",
     "PeblarError",
     "PeblarHealth",

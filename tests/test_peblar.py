@@ -1596,3 +1596,72 @@ def test_charge_limiter_reserved() -> None:
         patched_fixture("ev_interface.json", ChargeCurrentLimitSource="Reserved"),
     )
     assert ev_interface.charge_current_limit_source is ChargeLimiter.RESERVED
+
+
+# ---------------------------------------------------------------------------
+# Device state endpoints
+# ---------------------------------------------------------------------------
+CONNECTOR_URL = BASE_URL + "system/connector"
+NTP_SYNC_URL = BASE_URL + "system/ntp-sync"
+WEB_INTERFACE_MODE_URL = BASE_URL + "system/web-interface-mode"
+AUTH_STATUS_URL = BASE_URL + "auth/status"
+LOGOUT_URL = BASE_URL + "auth/logout"
+
+
+async def test_connector() -> None:
+    """Test the connector endpoint reports what is plugged in."""
+    with aioresponses() as mocked:
+        mocked.get(CONNECTOR_URL, status=200, body=load_fixture("connector.json"))
+        async with Peblar(host=HOST) as peblar:
+            connector = await peblar.connector()
+    assert connector.plugged_in_ev is False
+    assert connector.plugged_in_evse is True
+
+
+async def test_auth_status() -> None:
+    """Test the session status endpoint."""
+    with aioresponses() as mocked:
+        mocked.get(AUTH_STATUS_URL, status=200, body=load_fixture("auth_status.json"))
+        async with Peblar(host=HOST) as peblar:
+            status = await peblar.auth_status()
+    assert status.active is True
+    assert status.version_hash == 2645344664
+
+
+async def test_time_synced() -> None:
+    """Test the NTP sync endpoint returns a plain boolean."""
+    with aioresponses() as mocked:
+        mocked.get(NTP_SYNC_URL, status=200, body=load_fixture("ntp_sync.json"))
+        async with Peblar(host=HOST) as peblar:
+            assert await peblar.time_synced() is True
+
+
+async def test_web_interface_mode() -> None:
+    """Test the web interface mode endpoint returns a plain string."""
+    with aioresponses() as mocked:
+        mocked.get(
+            WEB_INTERFACE_MODE_URL,
+            status=200,
+            body=load_fixture("web_interface_mode.json"),
+        )
+        async with Peblar(host=HOST) as peblar:
+            assert await peblar.web_interface_mode() == "dashboard"
+
+
+async def test_logout_forgets_the_password() -> None:
+    """Test logging out stops the client logging itself back in.
+
+    The 401 retry added for the reauthentication issues relies on a stored
+    password, so an explicit logout has to clear it or the very next
+    request would undo the logout.
+    """
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        mocked.post(LOGOUT_URL, status=204, body="", content_type="text/plain")
+        mocked.get(USER_CONFIG_URL, status=401, body="", content_type="text/plain")
+
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            await peblar.logout()
+            with pytest.raises(PeblarAuthenticationError):
+                await peblar.user_configuration()

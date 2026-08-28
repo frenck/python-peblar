@@ -2171,6 +2171,50 @@ async def system(
     console.print(table)
 
 
+@cli.command("status")
+async def status(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,  # noqa: ARG001  # pylint: disable=unused-argument
+) -> None:
+    """Show the live status of the Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        connector = await peblar.connector()
+        time_synced = await peblar.time_synced()
+        mode = await peblar.web_interface_mode()
+
+    table = Table(title="Peblar charger status")
+    table.add_column("Property", style="cyan bold")
+    table.add_column("Value", style="bold")
+
+    table.add_row(
+        "Cable plugged into charger", convert_to_string(connector.plugged_in_evse)
+    )
+    table.add_row("Cable plugged into EV", convert_to_string(connector.plugged_in_ev))
+    table.add_row("Time synchronized", convert_to_string(time_synced))
+    table.add_row("Web interface mode", mode)
+
+    console.print(table)
+
+
 @cli.command("scan")
 async def scan(
     quiet: Annotated[bool, QUIET_OPTION] = False,

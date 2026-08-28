@@ -34,8 +34,10 @@ from .exceptions import (
 from .models import (
     BaseModel,
     PeblarApiToken,
+    PeblarAuthStatus,
     PeblarBuzzerVolume,
     PeblarChargeSessionAuthorization,
+    PeblarConnector,
     PeblarEVInterface,
     PeblarEVInterfaceChange,
     PeblarEVInterfaceReplace,
@@ -46,6 +48,7 @@ from .models import (
     PeblarMeter,
     PeblarMeterHistory,
     PeblarModbusApiAccess,
+    PeblarNtpSync,
     PeblarReboot,
     PeblarRfidToken,
     PeblarSetUserConfiguration,
@@ -56,6 +59,7 @@ from .models import (
     PeblarUpdate,
     PeblarUserConfiguration,
     PeblarVersions,
+    PeblarWebInterfaceMode,
     resolve_led_brightness,
 )
 from .utils import build_error_message, get_awesome_version
@@ -414,6 +418,35 @@ class Peblar:
         """Get information about the Peblar charger."""
         result = await self.request(URL("system/info"))
         return PeblarSystemInformation.from_json(result)
+
+    async def logout(self) -> None:
+        """Log out of the Peblar charger, ending the current session.
+
+        Also forgets the stored password, so a later request will not
+        quietly log back in again.
+        """
+        await self.request(URL("auth/logout"), method=hdrs.METH_POST)
+        self._password = None
+
+    async def auth_status(self) -> PeblarAuthStatus:
+        """Get the state of the current web interface session."""
+        result = await self.request(URL("auth/status"))
+        return PeblarAuthStatus.from_json(result)
+
+    async def connector(self) -> PeblarConnector:
+        """Get what is currently plugged into the charger."""
+        result = await self.request(URL("system/connector"))
+        return PeblarConnector.from_json(result)
+
+    async def time_synced(self) -> bool:
+        """Return whether the charger's clock is synchronized."""
+        result = await self.request(URL("system/ntp-sync"))
+        return PeblarNtpSync.from_json(result).time_synced
+
+    async def web_interface_mode(self) -> str:
+        """Return the mode the charger's web interface is running in."""
+        result = await self.request(URL("system/web-interface-mode"))
+        return PeblarWebInterfaceMode.from_json(result).mode
 
     async def user_configuration(self) -> PeblarUserConfiguration:
         """Get information about the user configuration."""

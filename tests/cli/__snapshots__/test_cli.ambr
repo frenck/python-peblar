@@ -147,6 +147,11 @@
       'scheduled',
       'smart_solar',
     ]),
+    'status': list([
+      'host',
+      'password',
+      'quiet',
+    ]),
     'system': list([
       'host',
       'password',
@@ -355,6 +360,20 @@
   │     Give it a moment and try again.                                         │
   │                                                                             │
   ╰─────────────────────────────────────────────────────────────────────────────╯
+  
+  '''
+# ---
+# name: test_status
+  '''
+            Peblar charger status           
+  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+  ┃ Property                   ┃ Value     ┃
+  ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+  │ Cable plugged into charger │ ✅        │
+  │ Cable plugged into EV      │ ❌        │
+  │ Time synchronized          │ ✅        │
+  │ Web interface mode         │ dashboard │
+  └────────────────────────────┴───────────┘
   
   '''
 # ---
