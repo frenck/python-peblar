@@ -927,3 +927,31 @@ async def test_no_relogin_without_a_stored_password() -> None:
         async with Peblar(host=HOST) as peblar:
             with pytest.raises(PeblarAuthenticationError):
                 await peblar.user_configuration()
+
+
+def test_user_configuration_parses_parameter_blobs() -> None:
+    """Test JSON encoded parameter blobs come back as dictionaries.
+
+    The charger sends these as JSON encoded strings and
+    ``__pre_deserialize__`` unpacks them, so both have to be annotated as
+    mappings. Annotating one as ``str`` handed back the repr of a dict.
+    """
+    config = PeblarUserConfiguration.from_json(
+        load_fixture("user_configuration.json"),
+    )
+    assert config.bop_source_parameters == {"address": "redacted-host"}
+    assert config.solar_charging_source_parameters == {"address": "redacted-host"}
+    assert config.bop_source_parameters.get("address") == "redacted-host"
+
+
+def test_user_configuration_empty_parameter_blobs() -> None:
+    """Test an empty parameter blob still lands as an empty dictionary."""
+    config = PeblarUserConfiguration.from_json(
+        patched_fixture(
+            "user_configuration.json",
+            BopSourceParameters="",
+            SolarChargingSourceParameters="",
+        ),
+    )
+    assert config.bop_source_parameters == {}
+    assert config.solar_charging_source_parameters == {}
