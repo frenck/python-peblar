@@ -187,10 +187,10 @@ class PeblarWebsocket:
             async with asyncio.timeout(self.request_timeout):
                 await future
         except TimeoutError as exception:
-            msg = f"Timeout while trying to {action} to topic {topic}"
+            msg = f"Timeout on the {action} request for topic {topic}"
             raise PeblarConnectionError(msg) from exception
         except (ClientError, OSError) as exception:
-            msg = f"Error occurred while trying to {action} to topic {topic}"
+            msg = f"Error occurred during the {action} request for topic {topic}"
             raise PeblarConnectionError(msg) from exception
         finally:
             self._pending.pop(topic, None)
@@ -200,6 +200,7 @@ class PeblarWebsocket:
         if self._client is None:
             return
 
+        cancelled = False
         try:
             async for message in self._client:
                 if message.type is not WSMsgType.TEXT:
@@ -214,7 +215,19 @@ class PeblarWebsocket:
                     continue
 
                 self._handle_message(payload)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
         finally:
+            # The reader owns the socket. If it stops on its own then
+            # nothing is consuming frames any more, so the connection goes
+            # with it rather than lingering open with no reader. On
+            # cancellation disconnect() is already doing the closing.
+            if not cancelled and not self._client.closed:
+                await self._client.close()
+
+            self._callbacks.clear()
+
             # Nobody is going to answer a pending subscribe any more.
             for future in self._pending.values():
                 if not future.done():

@@ -272,7 +272,7 @@ async def test_subscribe_times_out(websocket: PeblarWebsocket) -> None:
     """Test a charger that never acknowledges surfaces as a timeout."""
     websocket.request_timeout = 0.1
     await websocket.connect()
-    with pytest.raises(PeblarConnectionError, match="Timeout while trying"):
+    with pytest.raises(PeblarConnectionError, match="Timeout on the subscribe request"):
         await websocket.subscribe(SILENT_TOPIC, lambda _: None)
 
 
@@ -312,7 +312,9 @@ async def test_send_failure_surfaces_as_connection_error(
 
     # pylint: disable-next=protected-access
     monkeypatch.setattr(websocket._client, "send_json", boom)
-    with pytest.raises(PeblarConnectionError, match="Error occurred while trying"):
+    with pytest.raises(
+        PeblarConnectionError, match="Error occurred during the subscribe request"
+    ):
         await websocket.subscribe(SESSION_TOPIC, lambda _: None)
 
 
@@ -422,3 +424,47 @@ async def test_context_manager_exit_survives_a_dead_reader(
         await asyncio.sleep(0.05)
 
     assert websocket.connected is False
+
+
+async def test_reader_closes_the_socket_when_it_stops(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test a stopped reader does not leave the socket open behind it.
+
+    The reader owns the socket, so if it goes the connection goes too
+    rather than lingering with nothing consuming frames.
+    """
+    await websocket.connect()
+
+    def boom(_data: dict[str, Any]) -> None:
+        msg = "consumer bug"
+        raise RuntimeError(msg)
+
+    await websocket.subscribe_session_status(lambda _: boom({}))
+
+    # Wait for the reader to finish unwinding rather than racing it.
+    with pytest.raises(RuntimeError, match="consumer bug"):
+        await websocket.listen()
+
+    client = websocket._client  # pylint: disable=protected-access
+    assert client is not None
+    assert client.closed is True
+    # Subscriptions went with it.
+    assert not websocket._callbacks  # pylint: disable=protected-access
+
+
+async def test_cancelling_listen_leaves_the_socket_open(
+    websocket: PeblarWebsocket,
+) -> None:
+    """Test cancelling the observer does not close what it was watching."""
+    await websocket.connect()
+    listener = asyncio.create_task(websocket.listen())
+    await asyncio.sleep(0)
+    listener.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await listener
+
+    client = websocket._client  # pylint: disable=protected-access
+    assert client is not None
+    assert client.closed is False
+    assert websocket.connected is True
