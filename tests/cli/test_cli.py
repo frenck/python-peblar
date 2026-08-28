@@ -626,6 +626,19 @@ def test_anonymize_tokens_redacts_anything_that_is_not_a_token() -> None:
     assert _anonymize({"Tokens": ["0123456789ABCD"]}) == {"Tokens": ["<redacted>"]}
 
 
+@pytest.mark.parametrize(
+    "tokens",
+    ["0123456789ABCD", {"RfidTokenUid": "0123456789ABCD"}, 42, None],
+)
+def test_anonymize_redacts_a_token_list_that_is_not_a_list(tokens: object) -> None:
+    """A Tokens value of the wrong shape cannot be scrubbed, so it goes.
+
+    Walking the fields only works on a list of token objects. Anything
+    else is redacted whole, rather than trusted to be harmless.
+    """
+    assert _anonymize({"Tokens": tokens}) == {"Tokens": "<redacted>"}
+
+
 # ---------------------------------------------------------------------------
 # Dump command
 # ---------------------------------------------------------------------------
