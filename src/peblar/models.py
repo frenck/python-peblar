@@ -296,7 +296,7 @@ class PeblarUserConfiguration(BaseModel):
         metadata=field_options(alias="BopHomeWizardAddress")
     )
     bop_source: str = field(metadata=field_options(alias="BopSource"))
-    bop_source_parameters: str = field(
+    bop_source_parameters: dict[str, Any] = field(
         metadata=field_options(alias="BopSourceParameters")
     )
     connected_phases: int = field(metadata=field_options(alias="ConnectedPhases"))
