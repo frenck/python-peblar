@@ -21,6 +21,7 @@ from .const import (
     LedBrightness,
     LedIntensityMode,
     PackageType,
+    SessionState,
     SmartChargingMode,
     SolarChargingMode,
     SoundVolume,
@@ -997,6 +998,48 @@ class PeblarScheduledCharging(BaseModel):
             5: self.saturday,
             6: self.sunday,
         }
+
+
+@dataclass(kw_only=True)
+class PeblarSessionMeterData(BaseModel):
+    """Meter readings carried along with a session status event."""
+
+    instantaneous_power: list[int] = field(
+        metadata=field_options(alias="instantaneousPower")
+    )
+    """Instantaneous power per phase, in Watts."""
+
+    session_energy: int = field(metadata=field_options(alias="sessionEnergy"))
+    """Energy delivered in the current or last session, in Wh."""
+
+    total_energy: int = field(metadata=field_options(alias="totalEnergy"))
+    """Lifetime energy delivered by the charger, in Wh."""
+
+    @property
+    def instantaneous_power_total(self) -> int:
+        """Return the instantaneous power over all phases, in Watts."""
+        return sum(self.instantaneous_power)
+
+
+@dataclass(kw_only=True)
+class PeblarSessionStatus(BaseModel):
+    """Object holding a charging session status event.
+
+    Pushed over the websocket whenever the session changes, and once right
+    after subscribing.
+    """
+
+    state: SessionState = field(metadata=field_options(alias="state"))
+    meter_data: PeblarSessionMeterData | None = field(
+        default=None, metadata=field_options(alias="meterData")
+    )
+
+
+@dataclass(kw_only=True)
+class PeblarTokenFound(BaseModel):
+    """Object holding an RFID or vehicle token event."""
+
+    token_id: str = field(metadata=field_options(alias="tokenId"))
 
 
 @dataclass(kw_only=True)

@@ -8,6 +8,7 @@ import orjson
 import pytest
 from aiohttp import ClientConnectionError, ClientSession
 from aioresponses import aioresponses
+from yarl import URL
 
 from peblar import Peblar
 from peblar.const import (
@@ -1842,3 +1843,25 @@ async def test_delete_vehicle_token() -> None:
         )
         async with Peblar(host=HOST) as peblar:
             await peblar.delete_vehicle_token(evcc_id="NL-ABC-0123456789-1")
+
+
+# ---------------------------------------------------------------------------
+# Websocket accessor
+# ---------------------------------------------------------------------------
+async def test_websocket_requires_a_session() -> None:
+    """Test asking for a websocket before logging in is refused."""
+    peblar = Peblar(host=HOST)
+    with pytest.raises(PeblarError, match="Log in to the Peblar charger"):
+        peblar.websocket()
+    await peblar.close()
+
+
+async def test_websocket_shares_the_logged_in_session() -> None:
+    """Test the websocket reuses the session that carries the login cookie."""
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            websocket = peblar.websocket()
+    assert websocket.session is peblar.session
+    assert websocket.url == URL(f"ws://{HOST}/api/v1/ws")

@@ -28,6 +28,7 @@ from peblar.const import (
     CPState,
     LedBrightness,
     PackageType,
+    SessionState,
     SmartChargingMode,
     SoundVolume,
 )
@@ -43,6 +44,7 @@ from peblar.models import (
     PeblarMeterHistory,
     PeblarMeterHistorySession,
     PeblarRfidToken,
+    PeblarSessionStatus,
     PeblarSetUserConfiguration,
 )
 from peblar.peblar import Peblar
@@ -51,6 +53,16 @@ from .async_typer import AsyncTyper
 
 cli = AsyncTyper(help="Peblar CLI", no_args_is_help=True, add_completion=False)
 console = Console()
+
+SESSION_STATE_LABELS = {
+    SessionState.AVAILABLE: "[green]Available",
+    SessionState.CHARGING: "[green bold]Charging",
+    SessionState.FAULTED: "[red bold]Faulted",
+    SessionState.FINISHING: "[yellow]Finishing",
+    SessionState.PREPARING_AUTHORIZED: "[cyan]Waiting for cable",
+    SessionState.PREPARING_PLUGGED_IN: "[cyan]Waiting for authorization",
+    SessionState.UNAVAILABLE: "[red]Unavailable",
+}
 
 WEEKDAY_NAMES = (
     "Monday",
@@ -2314,6 +2326,59 @@ async def energy_history(
         table.add_row(period, f"{sum(month.energy) / 1000:.1f} kWh")
 
     console.print(table)
+
+
+@cli.command("watch")
+async def watch(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,  # noqa: ARG001  # pylint: disable=unused-argument
+) -> None:
+    """Stream live charging session updates until interrupted.
+
+    The charger pushes these over a websocket, so this costs one
+    connection instead of hammering the API with polls.
+    """
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+
+        def on_session(session: PeblarSessionStatus) -> None:
+            state = SESSION_STATE_LABELS.get(session.state, str(session.state))
+
+            if (readings := session.meter_data) is None:
+                console.print(state)
+                return
+
+            console.print(
+                f"{state}[/] [bold]{readings.instantaneous_power_total}W[/] "
+                f"session [bold]{readings.session_energy / 1000:.3f} kWh[/] "
+                f"total [bold]{readings.total_energy / 1000:.1f} kWh[/]"
+            )
+
+        async with peblar.websocket() as websocket:
+            # Announce first: the charger pushes the current state during
+            # the subscribe, so the banner would otherwise land second.
+            console.print("[cyan]Watching for updates, press Ctrl+C to stop...")
+            await websocket.subscribe_session_status(on_session)
+            with contextlib.suppress(asyncio.CancelledError, KeyboardInterrupt):
+                await websocket.listen()
 
 
 @cli.command("scan")

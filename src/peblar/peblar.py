@@ -68,6 +68,7 @@ from .models import (
     resolve_led_brightness,
 )
 from .utils import build_error_message, get_awesome_version
+from .websocket import PeblarWebsocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -487,6 +488,17 @@ class Peblar:
         """Get information about the Peblar charger."""
         result = await self.request(URL("system/info"))
         return PeblarSystemInformation.from_json(result)
+
+    def websocket(self) -> PeblarWebsocket:
+        """Get a websocket client for this charger's live event stream.
+
+        Shares the logged-in session, so call login() first.
+        """
+        if self.session is None:
+            msg = "Log in to the Peblar charger before opening a websocket."
+            raise PeblarError(msg)
+
+        return PeblarWebsocket(host=self.host, session=self.session)
 
     async def logout(self) -> None:
         """Log out of the Peblar charger, ending the current session.

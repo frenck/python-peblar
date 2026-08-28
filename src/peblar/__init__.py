@@ -8,9 +8,11 @@ from .const import (
     CPState,
     LedBrightness,
     LedIntensityMode,
+    SessionState,
     SmartChargingMode,
     SolarChargingMode,
     SoundVolume,
+    WebsocketTopic,
 )
 from .exceptions import (
     PeblarAuthenticationError,
@@ -35,14 +37,18 @@ from .models import (
     PeblarScheduleSlot,
     PeblarSessionGraph,
     PeblarSessionGraphPoint,
+    PeblarSessionMeterData,
+    PeblarSessionStatus,
     PeblarSetUserConfiguration,
     PeblarSystem,
     PeblarSystemInformation,
+    PeblarTokenFound,
     PeblarUserConfiguration,
     PeblarVehicleToken,
     PeblarVersions,
 )
 from .peblar import Peblar, PeblarApi
+from .websocket import PeblarWebsocket, session_status_topic
 
 __all__ = [
     "MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API",
@@ -73,14 +79,21 @@ __all__ = [
     "PeblarScheduledCharging",
     "PeblarSessionGraph",
     "PeblarSessionGraphPoint",
+    "PeblarSessionMeterData",
+    "PeblarSessionStatus",
     "PeblarSetUserConfiguration",
     "PeblarSystem",
     "PeblarSystemInformation",
+    "PeblarTokenFound",
     "PeblarUnsupportedFirmwareVersionError",
     "PeblarUserConfiguration",
     "PeblarVehicleToken",
     "PeblarVersions",
+    "PeblarWebsocket",
+    "SessionState",
     "SmartChargingMode",
     "SolarChargingMode",
     "SoundVolume",
+    "WebsocketTopic",
+    "session_status_topic",
 ]
