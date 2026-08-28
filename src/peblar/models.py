@@ -1044,7 +1044,7 @@ class PeblarFirmwareUpdateStatus(BaseModel):
     also tells you how the previous one went.
 
     Peblar does not document the status values. `EFwUpdateSuccess` is one
-    observed in the wild; the charger's web interface only ever falls
+    value observed in the wild; the charger's web interface only ever falls
     back to "Unknown" of its own accord. That is too thin a basis for an
     enum, so this stays a plain string.
     """
