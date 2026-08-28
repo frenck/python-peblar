@@ -2,8 +2,8 @@
 
 from enum import IntEnum, StrEnum
 
+# Firmware version that introduced the local REST API.
 MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API = "1.6"
-"""Firmware version that introduced the local REST API."""
 
 
 class AccessMode(StrEnum):
