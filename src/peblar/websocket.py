@@ -189,7 +189,7 @@ class PeblarWebsocket:
                 if message.type is not WSMsgType.TEXT:
                     continue
 
-                # Anything unparseable is skipped rather than allowed to
+                # Anything unparsable is skipped rather than allowed to
                 # kill the reader, which would silently stop every
                 # subscription on this connection.
                 try:
