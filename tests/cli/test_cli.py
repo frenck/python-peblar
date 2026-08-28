@@ -397,12 +397,32 @@ def test_convert_to_string(value: object, expected: str) -> None:
     assert convert_to_string(value) == expected
 
 
+# Every field newer firmware added, so the older firmware tests below drop
+# all of them rather than a sample.
+NEWER_SYSTEM_INFORMATION_KEYS = (
+    "HwHas4pRelay",
+    "HwHasDualSocket",
+    "HwHasShutter",
+    "HwUKCompliant",
+    "NorFlash",
+)
+NEWER_USER_CONFIGURATION_KEYS = (
+    "ConnectHubVisibility",
+    "CustomCustomerId",
+    "Iso15118CommunicationEnable",
+    "SboAllowed",
+    "SboEnabled",
+    "SessionDownloadAllowed",
+    "UserDefinedHouseholdPowerLimitSourceParameters",
+)
+
+
 def test_info_on_older_firmware_shows_no_literal_none(
     runner: CliRunner,
 ) -> None:
     """Older firmware omits fields, and the table must not print "None"."""
     data = orjson.loads(load_fixture("system_information.json"))
-    for key in ("HwHas4pRelay", "HwHasDualSocket", "HwHasShutter", "HwUKCompliant"):
+    for key in NEWER_SYSTEM_INFORMATION_KEYS:
         del data[key]
 
     info = PeblarSystemInformation.from_dict(data)
@@ -410,7 +430,8 @@ def test_info_on_older_firmware_shows_no_literal_none(
     exit_code, output = _invoke(runner, ["info", *_AUTH], mock_cls)
     assert exit_code == 0
     assert "None" not in output
-    assert "N/A" in output
+    # One "N/A" for every field the charger did not report.
+    assert output.count("N/A") == len(NEWER_SYSTEM_INFORMATION_KEYS)
 
 
 def test_config_on_older_firmware_shows_no_literal_none(
@@ -418,7 +439,7 @@ def test_config_on_older_firmware_shows_no_literal_none(
 ) -> None:
     """Older firmware omits settings, and the table must not print "None"."""
     data = orjson.loads(load_fixture("user_configuration.json"))
-    for key in ("ConnectHubVisibility", "Iso15118CommunicationEnable", "SboAllowed"):
+    for key in NEWER_USER_CONFIGURATION_KEYS:
         del data[key]
 
     config = PeblarUserConfiguration.from_dict(data)
@@ -426,3 +447,6 @@ def test_config_on_older_firmware_shows_no_literal_none(
     exit_code, output = _invoke(runner, ["config", *_AUTH], mock_cls)
     assert exit_code == 0
     assert "None" not in output
+    # The parameter blob defaults to an empty dict, not None, so it renders
+    # blank instead of "N/A"; every other absent setting shows "N/A".
+    assert output.count("N/A") == len(NEWER_USER_CONFIGURATION_KEYS) - 1
