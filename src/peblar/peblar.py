@@ -38,6 +38,7 @@ from .models import (
     PeblarBuzzerVolume,
     PeblarChargeSessionAuthorization,
     PeblarConnector,
+    PeblarEnergyHistory,
     PeblarEVInterface,
     PeblarEVInterfaceChange,
     PeblarEVInterfaceReplace,
@@ -51,6 +52,8 @@ from .models import (
     PeblarNtpSync,
     PeblarReboot,
     PeblarRfidToken,
+    PeblarScheduledCharging,
+    PeblarSessionGraph,
     PeblarSetUserConfiguration,
     PeblarSmartCharging,
     PeblarSocketLock,
@@ -447,6 +450,36 @@ class Peblar:
         """Return the mode the charger's web interface is running in."""
         result = await self.request(URL("system/web-interface-mode"))
         return PeblarWebInterfaceMode.from_json(result).mode
+
+    async def session_graph(self) -> PeblarSessionGraph:
+        """Get the power graph of the current or last charging session."""
+        result = await self.request(URL("statistics/session"))
+        return PeblarSessionGraph.from_json(result)
+
+    async def energy_history(self) -> PeblarEnergyHistory:
+        """Get the long term energy history of the charger."""
+        result = await self.request(URL("statistics/history"))
+        return PeblarEnergyHistory.from_json(result)
+
+    async def scheduled_charging(self) -> PeblarScheduledCharging:
+        """Get the local charging schedule."""
+        result = await self.request(URL("config/scheduledcharging/schedules"))
+        return PeblarScheduledCharging.from_json(result)
+
+    async def set_scheduled_charging(
+        self,
+        schedule: PeblarScheduledCharging,
+    ) -> None:
+        """Replace the local charging schedule.
+
+        Every weekday has to be present, so read the current schedule,
+        change what you want and hand the whole thing back.
+        """
+        await self.request(
+            URL("config/scheduledcharging/schedules"),
+            method=hdrs.METH_POST,
+            data=schedule,
+        )
 
     async def user_configuration(self) -> PeblarUserConfiguration:
         """Get information about the user configuration."""

@@ -33,6 +33,8 @@ from peblar.exceptions import (
 from peblar.models import (
     PeblarEVInterface,
     PeblarMeter,
+    PeblarScheduledCharging,
+    PeblarScheduleSlot,
     PeblarSetUserConfiguration,
     PeblarSmartCharging,
     PeblarSystemInformation,
@@ -1665,3 +1667,97 @@ async def test_logout_forgets_the_password() -> None:
             await peblar.logout()
             with pytest.raises(PeblarAuthenticationError):
                 await peblar.user_configuration()
+
+
+# ---------------------------------------------------------------------------
+# Statistics and the local charging schedule
+# ---------------------------------------------------------------------------
+SESSION_GRAPH_URL = BASE_URL + "statistics/session"
+ENERGY_HISTORY_URL = BASE_URL + "statistics/history"
+SCHEDULED_CHARGING_URL = BASE_URL + "config/scheduledcharging/schedules"
+
+
+async def test_session_graph() -> None:
+    """Test the charging session graph is parsed, newest measurement first."""
+    with aioresponses() as mocked:
+        mocked.get(
+            SESSION_GRAPH_URL, status=200, body=load_fixture("session_graph.json")
+        )
+        async with Peblar(host=HOST) as peblar:
+            graph = await peblar.session_graph()
+
+    assert len(graph.data) == 3
+    newest = graph.data[0]
+    assert newest.average_power == [3450, 3410, 3480]
+    assert newest.average_power_total == 10340
+    assert newest.timestamp.year == 2026
+    assert newest.timestamp.tzinfo is not None
+    assert graph.data[-1].timestamp < newest.timestamp
+
+
+async def test_energy_history() -> None:
+    """Test the long term energy history is parsed."""
+    with aioresponses() as mocked:
+        mocked.get(
+            ENERGY_HISTORY_URL, status=200, body=load_fixture("energy_history.json")
+        )
+        async with Peblar(host=HOST) as peblar:
+            history = await peblar.energy_history()
+
+    august = next(m for m in history.months if m.month == 8 and m.year == 2026)
+    assert len(august.energy) == 31
+    assert august.energy[30] == 12500
+    year = next(y for y in history.years if y.year == 2026)
+    assert len(year.energy) == 12
+    assert year.energy[7] == 12500
+
+
+async def test_scheduled_charging() -> None:
+    """Test the local charging schedule is parsed for every weekday."""
+    with aioresponses() as mocked:
+        mocked.get(
+            SCHEDULED_CHARGING_URL,
+            status=200,
+            body=load_fixture("scheduled_charging.json"),
+        )
+        async with Peblar(host=HOST) as peblar:
+            schedule = await peblar.scheduled_charging()
+
+    assert len(schedule.by_weekday) == 7
+    assert schedule.monday[0].current_limit == 0
+    assert schedule.monday[0].start_time == 0
+    assert schedule.by_weekday[0] is schedule.monday
+    assert schedule.by_weekday[6] is schedule.sunday
+
+
+async def test_set_scheduled_charging() -> None:
+    """Test writing the local charging schedule back to the charger."""
+    schedule = PeblarScheduledCharging.from_json(
+        load_fixture("scheduled_charging.json"),
+    )
+    schedule.monday = [
+        PeblarScheduleSlot(current_limit=0, start_time=0),
+        PeblarScheduleSlot(current_limit=10, start_time=23 * 60),
+    ]
+
+    with aioresponses() as mocked:
+        mocked.post(
+            SCHEDULED_CHARGING_URL, status=200, body="", content_type="text/plain"
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.set_scheduled_charging(schedule)
+
+    payload = request_payload(mocked)
+    assert set(payload) == {
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    }
+    assert payload["Monday"] == [
+        {"CurrentLimit": 0, "StartTime": 0},
+        {"CurrentLimit": 10, "StartTime": 1380},
+    ]

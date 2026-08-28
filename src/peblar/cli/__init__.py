@@ -52,6 +52,16 @@ from .async_typer import AsyncTyper
 cli = AsyncTyper(help="Peblar CLI", no_args_is_help=True, add_completion=False)
 console = Console()
 
+WEEKDAY_NAMES = (
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+)
+
 QUIET_OPTION = typer.Option(
     ...,
     "--quiet",
@@ -2211,6 +2221,96 @@ async def status(
     table.add_row("Cable plugged into EV", convert_to_string(connector.plugged_in_ev))
     table.add_row("Time synchronized", convert_to_string(time_synced))
     table.add_row("Web interface mode", mode)
+
+    console.print(table)
+
+
+@cli.command("schedule")
+async def schedule(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,  # noqa: ARG001  # pylint: disable=unused-argument
+) -> None:
+    """Show the local charging schedule."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        scheduled = await peblar.scheduled_charging()
+
+    table = Table(title="Peblar charging schedule")
+    table.add_column("Day", style="cyan bold")
+    table.add_column("From", style="bold")
+    table.add_column("Charge current limit", style="bold")
+
+    for index, day in enumerate(WEEKDAY_NAMES):
+        slots = scheduled.by_weekday[index]
+        if not slots:
+            table.add_row(day, "-", "No schedule")
+            continue
+
+        for slot_index, slot in enumerate(slots):
+            limit = f"{slot.current_limit}A" if slot.current_limit else "No charging"
+            start = f"{slot.start_time // 60:02d}:{slot.start_time % 60:02d}"
+            table.add_row(day if slot_index == 0 else "", start, limit)
+
+    console.print(table)
+
+
+@cli.command("history")
+async def energy_history(
+    host: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger IP address or hostname",
+            prompt="Host address",
+            show_default=False,
+            envvar="PEBLAR_HOST",
+        ),
+    ],
+    password: Annotated[
+        str,
+        typer.Option(
+            help="Peblar charger login password",
+            prompt="Password",
+            show_default=False,
+            hide_input=True,
+            envvar="PEBLAR_PASSWORD",
+        ),
+    ],
+    quiet: Annotated[bool, QUIET_OPTION] = False,  # noqa: ARG001  # pylint: disable=unused-argument
+) -> None:
+    """Show the energy history of the Peblar charger."""
+    async with Peblar(host=host) as peblar:
+        await peblar.login(password=password)
+        energy = await peblar.energy_history()
+
+    table = Table(title="Peblar energy history")
+    table.add_column("Period", style="cyan bold")
+    table.add_column("Energy", style="bold", justify="right")
+
+    for year in sorted(energy.years, key=lambda item: item.year):
+        table.add_row(str(year.year), f"{sum(year.energy) / 1000:.1f} kWh")
+
+    table.add_section()
+    for month in sorted(energy.months, key=lambda item: (item.year, item.month)):
+        period = f"{month.year}-{month.month:02d}"
+        table.add_row(period, f"{sum(month.energy) / 1000:.1f} kWh")
 
     console.print(table)
 

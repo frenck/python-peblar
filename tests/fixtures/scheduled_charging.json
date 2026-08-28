@@ -1,0 +1,44 @@
+{
+  "Friday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ],
+  "Monday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ],
+  "Saturday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ],
+  "Sunday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ],
+  "Thursday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ],
+  "Tuesday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ],
+  "Wednesday": [
+    {
+      "CurrentLimit": 0,
+      "StartTime": 0
+    }
+  ]
+}
