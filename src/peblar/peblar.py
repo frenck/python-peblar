@@ -57,6 +57,9 @@ if TYPE_CHECKING:
     from peblar.const import AccessMode, PackageType, SmartChargingMode
 
 
+LOGIN_URI = URL("auth/login")
+
+
 class _RfidTokenPayload(TypedDict):
     """Single RFID token payload returned by the standalone list endpoint."""
 
@@ -97,6 +100,7 @@ class Peblar:
         *,
         method: str = hdrs.METH_GET,
         data: BaseModel | None = None,
+        _relogged_in: bool = False,
     ) -> str:
         """Handle a request to a Peblar charger."""
         if self.session is None:
@@ -127,6 +131,17 @@ class Peblar:
             raise PeblarConnectionTimeoutError(msg) from exception
         except ClientResponseError as exception:
             if exception.status == 401:
+                # A session the charger forgot looks exactly like a wrong
+                # password. If we know the password, and this is not the
+                # login call itself, log back in and try once more. The
+                # charger drops sessions on reboot and after a network
+                # blip, which would otherwise force the user to
+                # re-authenticate by hand.
+                if not _relogged_in and self._password is not None and uri != LOGIN_URI:
+                    await self.login(password=self._password)
+                    return await self.request(
+                        uri, method=method, data=data, _relogged_in=True
+                    )
                 msg = "Authentication error. Provided password is invalid."
                 raise PeblarAuthenticationError(msg) from exception
             msg = "Error occurred while communicating to the Peblar charger"
@@ -149,7 +164,7 @@ class Peblar:
         (e.g. after a charger reboot).
         """
         await self.request(
-            URL("auth/login"),
+            LOGIN_URI,
             method=hdrs.METH_POST,
             data=PeblarLogin(
                 password=password,
