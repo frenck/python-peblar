@@ -14,6 +14,7 @@ from yarl import URL
 from .const import WebsocketTopic
 from .exceptions import (
     PeblarConnectionError,
+    PeblarConnectionTimeoutError,
     PeblarError,
 )
 from .models import PeblarSessionStatus, PeblarTokenFound
@@ -76,7 +77,10 @@ class PeblarWebsocket:
 
         try:
             self._client = await self.session.ws_connect(self.url)
-        except (ClientError, OSError) as exception:
+        except TimeoutError as exception:
+            msg = "Timeout occurred while connecting to the Peblar charger websocket"
+            raise PeblarConnectionTimeoutError(msg) from exception
+        except (ClientError, OSError, RuntimeError) as exception:
             msg = "Error occurred while connecting to the Peblar charger websocket"
             raise PeblarConnectionError(msg) from exception
 
@@ -85,8 +89,10 @@ class PeblarWebsocket:
     async def subscribe(self, topic: str, callback: EventCallback) -> None:
         """Subscribe to a topic, handing every event to the callback.
 
-        The callback receives the raw event payload. For the topics with a
-        known shape, prefer the typed helpers below.
+        The callback receives the event payload, normalised to a mapping:
+        a topic that sends anything else, null included, arrives as an
+        empty dict. For the topics with a known shape, prefer the typed
+        helpers below.
 
         Keep the callback from raising. One reader serves every
         subscription on the connection, so an exception escaping a
@@ -164,7 +170,10 @@ class PeblarWebsocket:
             self._reader = None
 
         if self._client is not None:
-            await self._client.close()
+            # Teardown is called from finally blocks; it does not get to
+            # raise on the way out.
+            with contextlib.suppress(Exception):
+                await self._client.close()
             self._client = None
 
         self._callbacks.clear()
@@ -189,7 +198,7 @@ class PeblarWebsocket:
         except TimeoutError as exception:
             msg = f"Timeout on the {action} request for topic {topic}"
             raise PeblarConnectionError(msg) from exception
-        except (ClientError, OSError) as exception:
+        except (ClientError, OSError, RuntimeError) as exception:
             msg = f"Error occurred during the {action} request for topic {topic}"
             raise PeblarConnectionError(msg) from exception
         finally:
@@ -224,7 +233,10 @@ class PeblarWebsocket:
             # with it rather than lingering open with no reader. On
             # cancellation disconnect() is already doing the closing.
             if not cancelled and not self._client.closed:
-                await self._client.close()
+                # Never let a failing close replace whatever stopped the
+                # reader, since that is the error listen() reports.
+                with contextlib.suppress(Exception):
+                    await self._client.close()
 
             self._callbacks.clear()
 

@@ -468,3 +468,47 @@ async def test_cancelling_listen_leaves_the_socket_open(
     assert client is not None
     assert client.closed is False
     assert websocket.connected is True
+
+
+async def test_connect_to_a_closed_session(websocket: PeblarWebsocket) -> None:
+    """Test a closed session surfaces as a connection error.
+
+    aiohttp raises RuntimeError there rather than a ClientError, so it
+    used to escape as an unexpected exception type.
+    """
+    await websocket.session.close()
+    with pytest.raises(PeblarConnectionError, match="Error occurred"):
+        await websocket.connect()
+
+
+async def test_a_failing_close_does_not_mask_the_real_error(
+    websocket: PeblarWebsocket,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test a broken close cannot replace what actually stopped the reader.
+
+    listen() reports the cause, so a teardown failure must not overwrite
+    it on the way out.
+    """
+    await websocket.connect()
+
+    async def failing_close(*_args: Any, **_kwargs: Any) -> None:
+        msg = "close blew up"
+        raise RuntimeError(msg)
+
+    def boom(_data: dict[str, Any]) -> None:
+        msg = "consumer bug"
+        raise RuntimeError(msg)
+
+    client = websocket._client  # pylint: disable=protected-access
+    assert client is not None
+    monkeypatch.setattr(client, "close", failing_close)
+
+    await websocket.subscribe_session_status(lambda _: boom({}))
+
+    # The consumer bug, not the close failure.
+    with pytest.raises(RuntimeError, match="consumer bug"):
+        await websocket.listen()
+
+    # And teardown still does not raise.
+    await websocket.disconnect()
