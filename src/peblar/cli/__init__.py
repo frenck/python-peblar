@@ -2160,10 +2160,12 @@ async def system(
     table.add_column("Value", style="bold")
 
     table.add_row(
-        "Active error codes", ",".join(data.active_error_codes) or "No errors"
+        "Active error codes",
+        ", ".join(str(code) for code in data.active_error_codes) or "No errors",
     )
     table.add_row(
-        "Active warning codes", ",".join(data.active_warning_codes) or "No warnings"
+        "Active warning codes",
+        ", ".join(str(code) for code in data.active_warning_codes) or "No warnings",
     )
 
     table.add_section()

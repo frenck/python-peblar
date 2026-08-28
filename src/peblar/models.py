@@ -825,10 +825,10 @@ class PeblarHealth(BaseModel):
 class PeblarSystem(BaseModel):
     """Object holding the system information of the Peblar charger."""
 
-    active_error_codes: list[str] = field(
+    active_error_codes: list[int] = field(
         metadata=field_options(alias="ActiveErrorCodes")
     )
-    active_warning_codes: list[str] = field(
+    active_warning_codes: list[int] = field(
         metadata=field_options(alias="ActiveWarningCodes")
     )
     cellular_signal_strength: int | None = field(
