@@ -95,11 +95,18 @@ def format_volts(volts: int | None) -> str:
 
 
 def convert_to_string(value: object) -> str:
-    """Convert a value to a string."""
+    """Convert a value to a string.
+
+    Anything the charger did not report becomes "N/A" rather than the
+    literal "None", which is what older firmware leaves behind for the
+    fields it does not know about.
+    """
+    if value is None:
+        return "N/A"
     if isinstance(value, bool):
         return "✅" if value else "❌"
     if isinstance(value, dict):
-        return "".join(f"{key}: {value}" for key, value in value.items())
+        return ", ".join(f"{key}: {item}" for key, item in value.items())
     return str(value)
 
 

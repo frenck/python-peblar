@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import click
+import orjson
 import pytest
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from peblar.cli import cli
+from peblar.cli import cli, convert_to_string
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
@@ -376,3 +377,52 @@ def test_bad_request_message_survives_rich_markup(
     exit_code, output = _invoke(runner, ["meterhistory", *_AUTH], mock_cls)
     assert exit_code == 1
     assert reason in output
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, "N/A"),
+        (True, "✅"),
+        (False, "❌"),
+        ({}, ""),
+        ({"address": "meter-1"}, "address: meter-1"),
+        ({"address": "meter-1", "port": 8080}, "address: meter-1, port: 8080"),
+        ("plain", "plain"),
+        (16, "16"),
+    ],
+)
+def test_convert_to_string(value: object, expected: str) -> None:
+    """Values render readably, including absent ones and multi-key blobs."""
+    assert convert_to_string(value) == expected
+
+
+def test_info_on_older_firmware_shows_no_literal_none(
+    runner: CliRunner,
+) -> None:
+    """Older firmware omits fields, and the table must not print "None"."""
+    data = orjson.loads(load_fixture("system_information.json"))
+    for key in ("HwHas4pRelay", "HwHasDualSocket", "HwHasShutter", "HwUKCompliant"):
+        del data[key]
+
+    info = PeblarSystemInformation.from_dict(data)
+    mock_cls = _mock_peblar(login=None, system_information=info)
+    exit_code, output = _invoke(runner, ["info", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert "None" not in output
+    assert "N/A" in output
+
+
+def test_config_on_older_firmware_shows_no_literal_none(
+    runner: CliRunner,
+) -> None:
+    """Older firmware omits settings, and the table must not print "None"."""
+    data = orjson.loads(load_fixture("user_configuration.json"))
+    for key in ("ConnectHubVisibility", "Iso15118CommunicationEnable", "SboAllowed"):
+        del data[key]
+
+    config = PeblarUserConfiguration.from_dict(data)
+    mock_cls = _mock_peblar(login=None, user_configuration=config)
+    exit_code, output = _invoke(runner, ["config", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert "None" not in output
