@@ -25,6 +25,7 @@ from .exceptions import (
     PeblarConnectionError,
     PeblarConnectionTimeoutError,
     PeblarError,
+    PeblarRateLimitError,
 )
 from .models import (
     BaseModel,
@@ -50,6 +51,7 @@ from .models import (
     PeblarUserConfiguration,
     PeblarVersions,
 )
+from .utils import build_error_message
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -89,7 +91,7 @@ class Peblar:
         self.url = URL.build(scheme="http", host=self.host, path="/api/v1/")
 
     @retry(
-        retry=retry_if_exception_type(PeblarConnectionError),
+        retry=retry_if_exception_type((PeblarConnectionError, PeblarRateLimitError)),
         stop=stop_after_attempt(3),
         wait=wait_exponential(),
         reraise=True,
@@ -110,6 +112,9 @@ class Peblar:
             )
             self._close_session = True
 
+        # The body is read before the status is checked, so a failing
+        # request can still tell us what the charger complained about.
+        content = ""
         try:
             async with asyncio.timeout(self.request_timeout):
                 response = await self.session.request(
@@ -118,13 +123,7 @@ class Peblar:
                     headers={"Content-Type": "application/json"},
                     data=data.to_json() if data else None,
                 )
-                if response.status == 400:
-                    body = await response.text()
-                    try:
-                        msg = orjson.loads(body) if body else "Bad request"
-                    except orjson.JSONDecodeError:
-                        msg = body or "Bad request"
-                    raise PeblarBadRequestError(msg)
+                content = await response.text()
                 response.raise_for_status()
         except TimeoutError as exception:
             msg = "Timeout occurred while connecting to the Peblar charger"
@@ -143,9 +142,21 @@ class Peblar:
                         uri, method=method, data=data, _relogged_in=True
                     )
                 msg = "Authentication error. Provided password is invalid."
-                raise PeblarAuthenticationError(msg) from exception
+                raise PeblarAuthenticationError(
+                    build_error_message(msg, content)
+                ) from exception
+            if exception.status == 429:
+                msg = "Rate limit exceeded while communicating to the Peblar charger"
+                raise PeblarRateLimitError(
+                    build_error_message(msg, content)
+                ) from exception
+            if exception.status == 400:
+                msg = "Bad request sent to the Peblar charger"
+                raise PeblarBadRequestError(
+                    build_error_message(msg, content)
+                ) from exception
             msg = "Error occurred while communicating to the Peblar charger"
-            raise PeblarError(msg) from exception
+            raise PeblarError(build_error_message(msg, content)) from exception
         except (
             ClientError,
             socket.gaierror,
@@ -153,7 +164,7 @@ class Peblar:
             msg = "Error occurred while communicating to the Peblar charger"
             raise PeblarConnectionError(msg) from exception
 
-        return await response.text()
+        return content
 
     async def login(self, *, password: str) -> None:
         """Log in to the Peblar charger.
@@ -455,7 +466,7 @@ class PeblarApi:
         self.url = URL.build(scheme="http", host=self.host, path="/api/wlac/v1/")
 
     @retry(
-        retry=retry_if_exception_type(PeblarConnectionError),
+        retry=retry_if_exception_type((PeblarConnectionError, PeblarRateLimitError)),
         stop=stop_after_attempt(3),
         wait=wait_exponential(),
         reraise=True,
@@ -475,6 +486,9 @@ class PeblarApi:
             )
             self._close_session = True
 
+        # The body is read before the status is checked, so a failing
+        # request can still tell us what the charger complained about.
+        content = ""
         try:
             async with asyncio.timeout(self.request_timeout):
                 response = await self.session.request(
@@ -486,13 +500,7 @@ class PeblarApi:
                     },
                     data=data.to_json() if data else None,
                 )
-                if response.status == 400:
-                    body = await response.text()
-                    try:
-                        msg = orjson.loads(body) if body else "Bad request"
-                    except orjson.JSONDecodeError:
-                        msg = body or "Bad request"
-                    raise PeblarBadRequestError(msg)
+                content = await response.text()
                 response.raise_for_status()
         except TimeoutError as exception:
             msg = "Timeout occurred while connecting to the Peblar charger API"
@@ -509,9 +517,23 @@ class PeblarApi:
                         uri, method=method, data=data, _refreshed=True
                     )
                 msg = "Authentication error. API token is invalid or expired."
-                raise PeblarAuthenticationError(msg) from exception
+                raise PeblarAuthenticationError(
+                    build_error_message(msg, content)
+                ) from exception
+            if exception.status == 429:
+                msg = (
+                    "Rate limit exceeded while communicating to the Peblar charger API"
+                )
+                raise PeblarRateLimitError(
+                    build_error_message(msg, content)
+                ) from exception
+            if exception.status == 400:
+                msg = "Bad request sent to the Peblar charger API"
+                raise PeblarBadRequestError(
+                    build_error_message(msg, content)
+                ) from exception
             msg = "Error occurred while communicating to the Peblar charger API"
-            raise PeblarError(msg) from exception
+            raise PeblarError(build_error_message(msg, content)) from exception
         except (
             ClientError,
             socket.gaierror,
@@ -519,7 +541,7 @@ class PeblarApi:
             msg = "Error occurred while communicating to the Peblar charger API"
             raise PeblarConnectionError(msg) from exception
 
-        return await response.text()
+        return content
 
     async def ev_interface(
         self,

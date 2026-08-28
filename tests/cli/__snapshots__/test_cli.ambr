@@ -325,6 +325,20 @@
   
   '''
 # ---
+# name: test_rate_limit_error_handler
+  '''
+  ╭─────────────────────────────── Rate limited ────────────────────────────────╮
+  │                                                                             │
+  │     The Peblar charger is refusing requests because too many were made in a │
+  │     short time. The local REST API allows 5 requests per second, shared     │
+  │     between everything talking to the charger.                              │
+  │                                                                             │
+  │     Give it a moment and try again.                                         │
+  │                                                                             │
+  ╰─────────────────────────────────────────────────────────────────────────────╯
+  
+  '''
+# ---
 # name: test_system
   '''
                  Peblar charger system status               

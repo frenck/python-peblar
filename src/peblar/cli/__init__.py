@@ -36,6 +36,7 @@ from peblar.exceptions import (
     PeblarBadRequestError,
     PeblarConnectionError,
     PeblarError,
+    PeblarRateLimitError,
     PeblarUnsupportedFirmwareVersionError,
 )
 from peblar.models import (
@@ -188,7 +189,7 @@ async def meterhistory_fetch_data(
             stop=normalized_stop,
         )
     except PeblarBadRequestError as exc:
-        console.print(f"❌[red]Bad request: {exc}")
+        console.print(f"❌[red]{exc}")
         raise typer.Exit(code=1) from exc
     tokens = await peblar.rfid_tokens()
     return normalized_start, normalized_stop, history, tokens
@@ -520,6 +521,26 @@ def connection_error_handler(_: PeblarConnectionError) -> None:
         message,
         expand=False,
         title="Connection error",
+        border_style="red bold",
+    )
+    console.print(panel)
+    sys.exit(1)
+
+
+@cli.error_handler(PeblarRateLimitError)
+def rate_limit_error_handler(_: PeblarRateLimitError) -> None:
+    """Handle rate limit errors."""
+    message = """
+    The Peblar charger is refusing requests because too many were made in a
+    short time. The local REST API allows 5 requests per second, shared
+    between everything talking to the charger.
+
+    Give it a moment and try again.
+    """
+    panel = Panel(
+        message,
+        expand=False,
+        title="Rate limited",
         border_style="red bold",
     )
     console.print(panel)

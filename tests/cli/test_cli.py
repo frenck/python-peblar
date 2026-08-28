@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 from peblar.cli import cli
 from peblar.exceptions import (
     PeblarAuthenticationError,
+    PeblarRateLimitError,
     PeblarUnsupportedFirmwareVersionError,
 )
 from peblar.models import (
@@ -342,5 +343,17 @@ def test_unsupported_firmware_error_handler(
     handler = cli.error_handlers[PeblarUnsupportedFirmwareVersionError]
     with pytest.raises(SystemExit) as exc_info:
         handler(PeblarUnsupportedFirmwareVersionError("too old"))
+    assert exc_info.value.code == 1
+    assert capsys.readouterr().out == snapshot
+
+
+def test_rate_limit_error_handler(
+    capsys: pytest.CaptureFixture[str],
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Rate limit error handler prints a panel and exits with 1."""
+    handler = cli.error_handlers[PeblarRateLimitError]
+    with pytest.raises(SystemExit) as exc_info:
+        handler(PeblarRateLimitError("slow down"))
     assert exc_info.value.code == 1
     assert capsys.readouterr().out == snapshot
