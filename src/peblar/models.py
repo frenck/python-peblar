@@ -485,7 +485,13 @@ class PeblarUserConfiguration(BaseModel):
             "SolarChargingSourceParameters",
             "UserDefinedHouseholdPowerLimitSourceParameters",
         ):
-            d[key] = orjson.loads(d.get(key) or "{}")
+            # The charger sends these JSON encoded, but tolerate a blob that
+            # is already a mapping so feeding back an earlier result does
+            # not blow up on a second decode.
+            blob = d.get(key)
+            if isinstance(blob, str) or blob is None:
+                blob = orjson.loads(blob or "{}")
+            d[key] = blob
         return d
 
     @classmethod

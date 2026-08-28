@@ -97,9 +97,10 @@ def format_volts(volts: int | None) -> str:
 def convert_to_string(value: object) -> str:
     """Convert a value to a string.
 
-    Anything the charger did not report becomes "N/A" rather than the
-    literal "None", which is what older firmware leaves behind for the
-    fields it does not know about.
+    A field older firmware never reports arrives as None and renders as
+    "N/A" rather than the literal "None". Not every absent value arrives
+    that way though: the parameter blobs fall back to an empty dict, which
+    renders as an empty cell.
     """
     if value is None:
         return "N/A"

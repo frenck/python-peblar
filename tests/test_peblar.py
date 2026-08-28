@@ -1185,3 +1185,25 @@ def test_household_power_limit_source_parameters_are_decoded() -> None:
     assert config.user_defined_household_power_limit_source_parameters == {
         "address": "meter-1"
     }
+
+
+@pytest.mark.parametrize(
+    ("blob", "expected"),
+    [
+        ('{"address": "meter-1"}', {"address": "meter-1"}),
+        ({"address": "meter-1"}, {"address": "meter-1"}),
+        ("", {}),
+        (None, {}),
+    ],
+    ids=["encoded", "already-decoded", "empty-string", "null"],
+)
+def test_parameter_blob_shapes(blob: object, expected: dict[str, str]) -> None:
+    """Test the parameter blobs survive every shape the charger sends.
+
+    An already decoded mapping has to pass through untouched, so handing a
+    previously parsed payload back in does not fail on a second decode.
+    """
+    data = orjson.loads(load_fixture("user_configuration.json"))
+    data["BopSourceParameters"] = blob
+    config = PeblarUserConfiguration.from_dict(data)
+    assert config.bop_source_parameters == expected
