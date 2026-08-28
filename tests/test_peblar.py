@@ -1057,3 +1057,45 @@ async def test_authentication_error_includes_charger_message() -> None:
 def test_build_error_message(content: str, expected: str) -> None:
     """Test error bodies are only used when they carry a usable message."""
     assert build_error_message("Boom", content) == expected
+
+
+@pytest.mark.parametrize("status", [400, 401, 429, 500])
+async def test_undecodable_error_body_still_maps_to_a_peblar_error(
+    status: int,
+) -> None:
+    """Test a body that is not valid UTF-8 does not escape the error mapping.
+
+    The body is read before the status is checked, so a charger answering
+    an error with a mangled body must still raise a PeblarError rather
+    than a UnicodeDecodeError nobody is catching.
+    """
+    with aioresponses() as mocked:
+        for _ in range(3):
+            mocked.get(
+                API_SYSTEM_URL,
+                status=status,
+                body=b"\xff\xfe not utf-8 \x80",
+                content_type="application/json",
+            )
+        async with PeblarApi(host=HOST, token="t") as api:
+            with pytest.raises(PeblarError):
+                await api.system()
+
+
+async def test_undecodable_success_body_is_replaced_not_raised() -> None:
+    """Test undecodable bytes in a successful body do not blow up the read."""
+    with aioresponses() as mocked:
+        mocked.get(
+            API_SYSTEM_URL,
+            status=200,
+            body=b'{"ActiveErrorCodes": [], "ActiveWarningCodes": [],'
+            b'"CellularSignalStrength": null, "FirmwareVersion": "1.9.2\xff",'
+            b'"Force1PhaseAllowed": true, "PhaseCount": 3, "ProductPn": "p",'
+            b'"ProductSn": "s", "Uptime": 1, "WlanSignalStrength": null}',
+            content_type="application/json",
+        )
+        async with PeblarApi(host=HOST, token="t") as api:
+            system = await api.system()
+
+    assert system.phase_count == 3
+    assert system.firmware_version.startswith("1.9.2")

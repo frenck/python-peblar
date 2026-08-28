@@ -114,6 +114,8 @@ class Peblar:
 
         # The body is read before the status is checked, so a failing
         # request can still tell us what the charger complained about.
+        # Decoding never raises: an undecodable body must still come out
+        # as a PeblarError, not a UnicodeDecodeError.
         content = ""
         try:
             async with asyncio.timeout(self.request_timeout):
@@ -123,7 +125,7 @@ class Peblar:
                     headers={"Content-Type": "application/json"},
                     data=data.to_json() if data else None,
                 )
-                content = await response.text()
+                content = await response.text(errors="replace")
                 response.raise_for_status()
         except TimeoutError as exception:
             msg = "Timeout occurred while connecting to the Peblar charger"
@@ -488,6 +490,8 @@ class PeblarApi:
 
         # The body is read before the status is checked, so a failing
         # request can still tell us what the charger complained about.
+        # Decoding never raises: an undecodable body must still come out
+        # as a PeblarError, not a UnicodeDecodeError.
         content = ""
         try:
             async with asyncio.timeout(self.request_timeout):
@@ -500,7 +504,7 @@ class PeblarApi:
                     },
                     data=data.to_json() if data else None,
                 )
-                content = await response.text()
+                content = await response.text(errors="replace")
                 response.raise_for_status()
         except TimeoutError as exception:
             msg = "Timeout occurred while connecting to the Peblar charger API"
