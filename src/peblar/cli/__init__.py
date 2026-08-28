@@ -2516,19 +2516,29 @@ _JSON_PARAM_KEYS = frozenset(
 )
 
 
-def _anonymize_tokens(tokens: Sequence[object]) -> list[dict[str, str]]:
-    """Replace RFID tokens with sequential stand-ins.
+def _anonymize_tokens(tokens: Sequence[object]) -> list[object]:
+    """Replace the identifying parts of each RFID token.
 
     A token UID identifies a physical card someone carries around, so it
-    has no business ending up in a fixture file or a bug report.
+    has no business ending up in a fixture file or a bug report. Only
+    those parts are replaced: any other field is kept, so a token the
+    firmware grows later still shows up in the dump.
+
+    An entry that is not a token object is redacted outright, since there
+    is no way to tell whether it carries an identifier.
     """
-    return [
-        {
-            "RfidTokenUid": f"{index:014X}",
-            "RfidTokenDescription": f"RFID card {index}",
-        }
-        for index in range(1, len(tokens) + 1)
-    ]
+    anonymized: list[object] = []
+    for index, token in enumerate(tokens, start=1):
+        if not isinstance(token, dict):
+            anonymized.append("<redacted>")
+            continue
+
+        entry: dict[str, object] = {str(key): value for key, value in token.items()}
+        entry["RfidTokenUid"] = f"{index:014X}"
+        entry["RfidTokenDescription"] = f"RFID card {index}"
+        anonymized.append(entry)
+
+    return anonymized
 
 
 def _anonymize(data: dict[str, object]) -> dict[str, object]:

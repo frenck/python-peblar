@@ -582,3 +582,42 @@ def test_anonymize_empty_token_list() -> None:
 def test_anonymize_leaves_unknown_keys_alone() -> None:
     """Keys the anonymizer knows nothing about are passed through."""
     assert _anonymize({"SomethingNew": 42}) == {"SomethingNew": 42}
+
+
+def test_anonymize_tokens_keeps_fields_it_does_not_know() -> None:
+    """Fields newer firmware adds to a token survive the anonymizer.
+
+    The point of a dump is to be a useful fixture, so only the parts that
+    identify a physical card get replaced.
+    """
+    anonymized = _anonymize(
+        {
+            "Tokens": [
+                {
+                    "RfidTokenUid": "0123456789ABCD",
+                    "RfidTokenDescription": "My RFID Card",
+                    "ValidUntil": "2027-01-01",
+                    "Blocked": False,
+                }
+            ]
+        }
+    )
+    assert anonymized == {
+        "Tokens": [
+            {
+                "RfidTokenUid": "00000000000001",
+                "RfidTokenDescription": "RFID card 1",
+                "ValidUntil": "2027-01-01",
+                "Blocked": False,
+            }
+        ]
+    }
+
+
+def test_anonymize_tokens_redacts_anything_that_is_not_a_token() -> None:
+    """An entry that is not an object cannot be scrubbed, so it goes.
+
+    There is no way to tell whether a bare value carries an identifier,
+    and a dump is the wrong place to gamble on that.
+    """
+    assert _anonymize({"Tokens": ["0123456789ABCD"]}) == {"Tokens": ["<redacted>"]}
