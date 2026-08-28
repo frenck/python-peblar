@@ -12,7 +12,7 @@ import pytest
 from typer.main import get_command
 from typer.testing import CliRunner
 
-from peblar.cli import cli, convert_to_string
+from peblar.cli import _anonymize, cli, convert_to_string
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
@@ -544,3 +544,41 @@ def test_history(runner: CliRunner, snapshot: SnapshotAssertion) -> None:
     exit_code, output = _invoke(runner, ["history", *_AUTH], mock_cls)
     assert exit_code == 0
     assert output == snapshot
+
+
+# ---------------------------------------------------------------------------
+# Dump anonymization
+# ---------------------------------------------------------------------------
+
+
+def test_anonymize_rfid_tokens() -> None:
+    """RFID token UIDs are replaced with sequential stand-ins.
+
+    A UID identifies a physical card, so it must not survive into a
+    fixture file or a bug report.
+    """
+    data = orjson.loads(load_fixture("standalonelist.json"))
+    original_uids = {token["RfidTokenUid"] for token in data["Tokens"]}
+
+    anonymized = _anonymize(data)
+
+    assert anonymized == {
+        "Tokens": [
+            {"RfidTokenUid": "00000000000001", "RfidTokenDescription": "RFID card 1"},
+            {"RfidTokenUid": "00000000000002", "RfidTokenDescription": "RFID card 2"},
+        ]
+    }
+    # Nothing of the real card survived.
+    rendered = orjson.dumps(anonymized).decode()
+    assert not any(uid in rendered for uid in original_uids)
+    assert "My RFID Card" not in rendered
+
+
+def test_anonymize_empty_token_list() -> None:
+    """A charger with no tokens registered still anonymizes cleanly."""
+    assert _anonymize({"Tokens": []}) == {"Tokens": []}
+
+
+def test_anonymize_leaves_unknown_keys_alone() -> None:
+    """Keys the anonymizer knows nothing about are passed through."""
+    assert _anonymize({"SomethingNew": 42}) == {"SomethingNew": 42}

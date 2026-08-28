@@ -8,6 +8,7 @@ import json
 import locale
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -2515,6 +2516,21 @@ _JSON_PARAM_KEYS = frozenset(
 )
 
 
+def _anonymize_tokens(tokens: Sequence[object]) -> list[dict[str, str]]:
+    """Replace RFID tokens with sequential stand-ins.
+
+    A token UID identifies a physical card someone carries around, so it
+    has no business ending up in a fixture file or a bug report.
+    """
+    return [
+        {
+            "RfidTokenUid": f"{index:014X}",
+            "RfidTokenDescription": f"RFID card {index}",
+        }
+        for index in range(1, len(tokens) + 1)
+    ]
+
+
 def _anonymize(data: dict[str, object]) -> dict[str, object]:
     """Strip personally identifiable or device-unique fields from a response.
 
@@ -2525,7 +2541,9 @@ def _anonymize(data: dict[str, object]) -> dict[str, object]:
     result: dict[str, object] = {}
 
     for key, original in data.items():
-        if key in _REDACT_MAP:
+        if key == "Tokens" and isinstance(original, list):
+            result[key] = _anonymize_tokens(original)
+        elif key in _REDACT_MAP:
             result[key] = _REDACT_MAP[key]
         elif key in _MAC_KEYS:
             mac_counter += 1
@@ -2647,6 +2665,10 @@ async def dump(  # noqa: PLR0913
             "api_token.json",
             await peblar.request(URL("config/api-token")),
         )
+        _write(
+            "standalonelist.json",
+            await peblar.request(URL("config/auth/standalonelist")),
+        )
 
         # Local REST API endpoints (only available when enabled)
         if not quiet:
@@ -2660,6 +2682,9 @@ async def dump(  # noqa: PLR0913
         except PeblarConnectionError:
             if not quiet:
                 console.print("  [yellow]Skipped (could not connect to REST API)")
+        except PeblarUnsupportedFirmwareVersionError:
+            if not quiet:
+                console.print("  [yellow]Skipped (firmware too old for the REST API)")
         except PeblarError:
             if not quiet:
                 console.print(
