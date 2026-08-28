@@ -128,6 +128,40 @@ class BaseModel(DataClassORJSONMixin):
 
 
 @dataclass(kw_only=True)
+class PeblarAuthStatus(BaseModel):
+    """Object holding the state of the current web interface session."""
+
+    active: bool = field(metadata=field_options(alias="Active"))
+    version_hash: int = field(metadata=field_options(alias="VersionHash"))
+    """Changes when the charger's software changes, invalidating the session."""
+
+
+@dataclass(kw_only=True)
+class PeblarConnector(BaseModel):
+    """Object holding what is physically plugged into the charger."""
+
+    plugged_in_ev: bool = field(metadata=field_options(alias="PluggedInEV"))
+    """A cable is plugged into the vehicle."""
+
+    plugged_in_evse: bool = field(metadata=field_options(alias="PluggedInEVSE"))
+    """A cable is plugged into the charger."""
+
+
+@dataclass(kw_only=True)
+class PeblarNtpSync(BaseModel):
+    """Object holding the time synchronization state of the charger."""
+
+    time_synced: bool = field(metadata=field_options(alias="TimeSynced"))
+
+
+@dataclass(kw_only=True)
+class PeblarWebInterfaceMode(BaseModel):
+    """Object holding the mode the charger's web interface is running in."""
+
+    mode: str = field(metadata=field_options(alias="Mode"))
+
+
+@dataclass(kw_only=True)
 class PeblarApiToken(BaseModel):
     """Object holding the API token for the Peblar charger."""
 

@@ -20,6 +20,7 @@ from peblar.exceptions import (
     PeblarUnsupportedFirmwareVersionError,
 )
 from peblar.models import (
+    PeblarConnector,
     PeblarHealth,
     PeblarMeter,
     PeblarSystem,
@@ -507,3 +508,17 @@ def test_unsupported_firmware_handler_shows_the_versions(
     assert "1.6" in output
     assert "1.5.0" in output
     assert "XXX" not in output
+
+
+def test_status(runner: CliRunner, snapshot: SnapshotAssertion) -> None:
+    """Status command renders the charger's live state."""
+    connector = PeblarConnector.from_json(load_fixture("connector.json"))
+    mock_cls = _mock_peblar(
+        login=None,
+        connector=connector,
+        time_synced=True,
+        web_interface_mode="dashboard",
+    )
+    exit_code, output = _invoke(runner, ["status", *_AUTH], mock_cls)
+    assert exit_code == 0
+    assert output == snapshot
