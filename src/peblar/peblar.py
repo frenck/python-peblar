@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Self, TypedDict
+from typing import TYPE_CHECKING, Any, NotRequired, Self, TypedDict
 
 import orjson
 from aiohttp import ClientResponseError, CookieJar, hdrs
@@ -105,9 +105,14 @@ class _VehicleTokenPayload(TypedDict):
 
 
 class _VehicleTokenListEnvelope(TypedDict):
-    """Autocharge vehicle list response envelope."""
+    """Autocharge vehicle list response envelope.
 
-    VehicleTokens: list[_VehicleTokenPayload]
+    A charger with ISO 15118 turned off answers with a bare null instead
+    of this object, and when it does send the object the key itself can
+    be absent or null, so nothing here is guaranteed.
+    """
+
+    VehicleTokens: NotRequired[list[_VehicleTokenPayload] | None]
 
 
 @dataclass(kw_only=True)
