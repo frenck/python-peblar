@@ -1259,6 +1259,9 @@ async def system_information(
     table.add_row("Hardware has BOP", convert_to_string(info.hardware_has_bop))
     table.add_row("Hardware has buzzer", convert_to_string(info.hardware_has_buzzer))
     table.add_row(
+        "Hardware has dual socket", convert_to_string(info.hardware_has_dual_socket)
+    )
+    table.add_row(
         "Hardware has Eichrecht laser marking",
         convert_to_string(info.hardware_has_eichrecht_laser_marking),
     )
@@ -1271,9 +1274,14 @@ async def system_information(
         "Hardware has meter display", convert_to_string(info.hardware_has_meter_display)
     )
     table.add_row("Hardware has meter", convert_to_string(info.hardware_has_meter))
+    table.add_row(
+        "Hardware has 4-pole relay",
+        convert_to_string(info.hardware_has_four_pole_relay),
+    )
     table.add_row("Hardware has PLC", convert_to_string(info.hardware_has_plc))
     table.add_row("Hardware has RFID", convert_to_string(info.hardware_has_rfid))
     table.add_row("Hardware has RS485", convert_to_string(info.hardware_has_rs485))
+    table.add_row("Hardware has shutter", convert_to_string(info.hardware_has_shutter))
     table.add_row("Hardware has socket", convert_to_string(info.hardware_has_socket))
     table.add_row("Hardware has TPM", convert_to_string(info.hardware_has_tpm))
     table.add_row("Hardware has WLAN", convert_to_string(info.hardware_has_wlan))
@@ -1282,10 +1290,14 @@ async def system_information(
         "Hardware one or three phase",
         convert_to_string(info.hardware_one_or_three_phase),
     )
+    table.add_row(
+        "Hardware UK compliant", convert_to_string(info.hardware_uk_compliant)
+    )
     table.add_row("Hostname", info.hostname)
     table.add_row("Mainboard part number", info.mainboard_part_number)
     table.add_row("Mainboard serial number", info.mainboard_serial_number)
     table.add_row("Meter firmware version", info.meter_firmware_version)
+    table.add_row("NOR flash", convert_to_string(info.nor_flash))
     table.add_row("Product model name", info.product_model_name)
     table.add_row("Product number", info.product_number)
     table.add_row("Product serial number", info.product_serial_number)
@@ -1356,6 +1368,9 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row("BOP source", config.bop_source)
     table.add_row("Buzzer volume", convert_to_string(config.buzzer_volume))
+    table.add_row(
+        "Connect hub visibility", convert_to_string(config.connect_hub_visibility)
+    )
     table.add_row("Connected phases", convert_to_string(config.connected_phases))
     table.add_row("Current control BOP CT type", config.current_control_bop_ct_type)
     table.add_row(
@@ -1370,6 +1385,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
         "Current control fixed charge current limit",
         convert_to_string(config.current_control_fixed_charge_current_limit),
     )
+    table.add_row("Custom customer ID", convert_to_string(config.custom_customer_id))
     table.add_row("Ground monitoring", convert_to_string(config.ground_monitoring))
     table.add_row(
         "Group load balancing enabled",
@@ -1391,6 +1407,10 @@ async def user_configuration(  # pylint: disable=too-many-statements
         f"{config.group_load_balancing_max_current}A",
     )
     table.add_row("Group load balancing role", config.group_load_balancing_role)
+    table.add_row(
+        "ISO 15118 communication enabled",
+        convert_to_string(config.iso15118_communication_enabled),
+    )
     table.add_row(
         "LED intensity manual", convert_to_string(config.led_intensity_manual)
     )
@@ -1435,6 +1455,8 @@ async def user_configuration(  # pylint: disable=too-many-statements
         "Power limit input enabled", convert_to_string(config.power_limit_input_enabled)
     )
     table.add_row("Predefined CPO name", config.predefined_cpo_name)
+    table.add_row("SBO allowed", convert_to_string(config.sbo_allowed))
+    table.add_row("SBO enabled", convert_to_string(config.sbo_enabled))
     table.add_row(
         "Scheduled charging allowed",
         convert_to_string(config.scheduled_charging_allowed),
@@ -1445,6 +1467,9 @@ async def user_configuration(  # pylint: disable=too-many-statements
     )
     table.add_row("SECC OCPP active", convert_to_string(config.secc_ocpp_active))
     table.add_row("SECC OCPP URI", config.secc_ocpp_uri)
+    table.add_row(
+        "Session download allowed", convert_to_string(config.session_download_allowed)
+    )
     table.add_row(
         "Session manager charge without authentication",
         convert_to_string(config.session_manager_charge_without_authentication),
@@ -1481,6 +1506,10 @@ async def user_configuration(  # pylint: disable=too-many-statements
     table.add_row(
         "User defined household power limit source",
         config.user_defined_household_power_limit_source,
+    )
+    table.add_row(
+        "User defined household power limit source parameters",
+        convert_to_string(config.user_defined_household_power_limit_source_parameters),
     )
     table.add_row(
         "User defined household power limit",
