@@ -852,3 +852,78 @@ async def test_api_system_single_phase() -> None:
     assert system.force_single_phase_allowed is False
     assert system.wlan_signal_strength is None
     assert system.cellular_signal_strength is None
+
+
+# Transparent re-login (home-assistant/core#172604, #173297)
+# ---------------------------------------------------------------------------
+async def test_relogin_on_401_after_session_expiry() -> None:
+    """Test a forgotten session is recovered without bothering the user."""
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        # The charger forgot the session, for example after a reboot.
+        mocked.get(USER_CONFIG_URL, status=401, body="", content_type="text/plain")
+        # Logging back in, then the retried request.
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        mocked.get(
+            USER_CONFIG_URL, status=200, body=load_fixture("user_configuration.json")
+        )
+
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            config = await peblar.user_configuration()
+
+    assert config.local_rest_api_allowed is True
+
+
+async def test_relogin_only_retries_once() -> None:
+    """Test a charger that keeps rejecting the session gives up after one retry."""
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        mocked.get(USER_CONFIG_URL, status=401, body="", content_type="text/plain")
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        mocked.get(USER_CONFIG_URL, status=401, body="", content_type="text/plain")
+
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            with pytest.raises(PeblarAuthenticationError):
+                await peblar.user_configuration()
+
+
+async def test_relogin_surfaces_a_changed_password() -> None:
+    """Test a password changed on the charger still reaches the caller.
+
+    The stored password no longer works, so the automatic re-login is
+    itself rejected. That has to surface, otherwise Home Assistant never
+    asks the user for the new one.
+    """
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        mocked.get(USER_CONFIG_URL, status=401, body="", content_type="text/plain")
+        # The charger no longer accepts the password we have stored.
+        mocked.post(LOGIN_URL, status=401, body="", content_type="text/plain")
+
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            with pytest.raises(PeblarAuthenticationError):
+                await peblar.user_configuration()
+
+
+async def test_login_401_does_not_loop() -> None:
+    """Test a rejected login does not try to log in again to fix itself."""
+    with aioresponses() as mocked:
+        mocked.post(LOGIN_URL, status=204, body="", content_type="text/plain")
+        mocked.post(LOGIN_URL, status=401, body="", content_type="text/plain")
+
+        async with Peblar(host=HOST) as peblar:
+            await peblar.login(password="test-pass")
+            with pytest.raises(PeblarAuthenticationError):
+                await peblar.login(password="wrong-pass")
+
+
+async def test_no_relogin_without_a_stored_password() -> None:
+    """Test a client that never logged in has nothing to retry with."""
+    with aioresponses() as mocked:
+        mocked.get(USER_CONFIG_URL, status=401, body="", content_type="text/plain")
+        async with Peblar(host=HOST) as peblar:
+            with pytest.raises(PeblarAuthenticationError):
+                await peblar.user_configuration()
