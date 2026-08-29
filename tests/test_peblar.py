@@ -1105,6 +1105,18 @@ async def test_authentication_error_includes_charger_message() -> None:
         ("[]", "Boom"),
         ("not json", "Boom"),
         ("", "Boom"),
+        # Some endpoints answer with a bare JSON string instead.
+        ('"Nope"', "Boom: Nope"),
+        ('""', "Boom"),
+        ("42", "Boom"),
+        # And a few wrap that string a second time. This is what a charger
+        # without PLC hardware answers on the autocharge endpoints.
+        (
+            r'"\"This endpoint is not available when PLC hardware is not present '
+            r'or enabled.\""',
+            "Boom: This endpoint is not available when PLC hardware is not "
+            "present or enabled.",
+        ),
     ],
 )
 def test_build_error_message(content: str, expected: str) -> None:

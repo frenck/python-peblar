@@ -15,19 +15,32 @@ def get_awesome_version(version: str) -> AwesomeVersion:
 def build_error_message(message: str, content: str) -> str:
     """Enrich an error message with the one the charger sent along.
 
-    Peblar wraps errors in a JSON object holding a `statusmsg` field. Not
-    every response follows that shape, so anything else is dropped and the
-    caller is left with just the generic message.
+    Peblar usually wraps errors in a JSON object holding a `statusmsg`
+    field, but not always: some endpoints answer with a bare JSON string,
+    and a few of those wrap it a second time. Anything that is not a
+    readable sentence in the end is dropped, leaving the generic message.
     """
     try:
         payload = orjson.loads(content)
     except orjson.JSONDecodeError:
         return message
 
-    if not isinstance(payload, dict):
-        return message
+    if isinstance(payload, dict):
+        reason = payload.get("statusmsg") or payload.get("StatusMsg")
+    else:
+        reason = payload
 
-    reason = payload.get("statusmsg") or payload.get("StatusMsg")
+    # Some endpoints hand back a JSON string that itself holds JSON, so
+    # peel until there is nothing left to decode.
+    while isinstance(reason, str):
+        try:
+            unwrapped = orjson.loads(reason)
+        except orjson.JSONDecodeError:
+            break
+        if not isinstance(unwrapped, str):
+            break
+        reason = unwrapped
+
     if not isinstance(reason, str) or not reason:
         return message
 
