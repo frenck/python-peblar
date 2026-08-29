@@ -1109,6 +1109,11 @@ async def test_authentication_error_includes_charger_message() -> None:
         ('"Nope"', "Boom: Nope"),
         ('""', "Boom"),
         ("42", "Boom"),
+        # A string holding anything but another string is structured data,
+        # not a sentence, so it is dropped rather than shown as raw text.
+        (r'"{\"statusmsg\":\"Nope\"}"', "Boom"),
+        ('"42"', "Boom"),
+        ('"null"', "Boom"),
         # And a few wrap that string a second time. This is what a charger
         # without PLC hardware answers on the autocharge endpoints.
         (

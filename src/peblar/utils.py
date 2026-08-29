@@ -36,9 +36,14 @@ def build_error_message(message: str, content: str) -> str:
         try:
             unwrapped = orjson.loads(reason)
         except orjson.JSONDecodeError:
+            # Not JSON any more, so this is the sentence itself.
             break
+
         if not isinstance(unwrapped, str):
-            break
+            # Structured data rather than a sentence. Handing back the text
+            # it was written as would put raw JSON in front of the user.
+            return message
+
         reason = unwrapped
 
     if not isinstance(reason, str) or not reason:
