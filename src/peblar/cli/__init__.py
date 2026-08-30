@@ -156,37 +156,41 @@ def normalize_meterhistory_bound(
     value: str | None,
     *,
     is_stop: bool = False,
-) -> str | None:
-    """Convert a date-only meter history bound to UTC ISO format."""
-    if value is None or "T" in value:
-        return value
+) -> datetime | None:
+    """Read a meter history bound the way someone would type it.
 
+    A bare date covers the whole of that day, so a stop bound runs to its
+    last second rather than to midnight, which would drop the day itself.
+    """
+    if value is None:
+        return None
+
+    # Dates first: a full ISO parse would take a bare date too, and then
+    # a stop bound would land on midnight and drop the day itself.
     for fmt in ("%Y-%m-%d", "%d-%m-%Y"):
         try:
             bound = datetime.strptime(value, fmt)  # noqa: DTZ007
-            break
         except ValueError:
             continue
-    else:
-        return value
 
-    if is_stop:
-        bound = bound.replace(hour=23, minute=59, second=59)
+        if is_stop:
+            bound = bound.replace(hour=23, minute=59, second=59)
 
-    return bound.replace(tzinfo=UTC).isoformat().replace("+00:00", "Z")
+        return bound.replace(tzinfo=UTC)
+
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        msg = f"Could not read '{value}' as a date or timestamp"
+        raise typer.BadParameter(msg) from None
 
 
-def meterhistory_filename_part(value: str | None) -> str:
-    """Format a meter history bound value for use in filenames."""
+def meterhistory_filename_part(value: datetime | None) -> str:
+    """Format a meter history bound for use in filenames."""
     if value is None:
         return "all"
 
-    try:
-        dt = datetime.fromisoformat(value)
-    except ValueError:
-        return value.replace(":", "-").replace("T", "_")
-
-    return dt.strftime("%d-%m-%Y_%H-%M-%S")
+    return value.strftime("%d-%m-%Y_%H-%M-%S")
 
 
 def meterhistory_total_energy_mwh(history: PeblarMeterHistory) -> int:
@@ -210,7 +214,7 @@ async def meterhistory_fetch_data(
     *,
     start: str | None,
     stop: str | None,
-) -> tuple[str | None, str | None, PeblarMeterHistory, list[PeblarRfidToken]]:
+) -> tuple[datetime | None, datetime | None, PeblarMeterHistory, list[PeblarRfidToken]]:
     """Fetch and normalize data needed for meter history export."""
     normalized_start = normalize_meterhistory_bound(start)
     normalized_stop = normalize_meterhistory_bound(stop, is_stop=True)

@@ -150,7 +150,18 @@ class PeblarWebsocket:
         *,
         topic: WebsocketTopic = WebsocketTopic.RFID_TOKEN_FOUND,
     ) -> None:
-        """Subscribe to tokens being presented to the charger."""
+        """Subscribe to a token being read for enrolment.
+
+        This is not how a charger announces who authorized a session. In
+        Peblar's own web interface the only thing subscribing to these
+        topics is the dialog that adds a token, where you hold a card
+        against the reader and it fills in the identifier for you.
+        Listening in on a charger going about its business produces
+        nothing, badged-in sessions included.
+
+        For the token a session was authorized with, read
+        PeblarMeterHistorySession.auth_token instead.
+        """
         await self.subscribe(
             topic,
             lambda data: callback(PeblarTokenFound.from_dict(data)),
