@@ -17,9 +17,13 @@ jobs:
   pytest:
     name: Python ${{ matrix.python }}
     runs-on: ubuntu-latest
+    # 3.15 is still a pre-release and zeroconf has no wheels for it yet, so
+    # it runs for the signal without blocking anything. Drop this once the
+    # wheels land.
+    continue-on-error: ${{ matrix.python == '3.15' }}
     strategy:
       matrix:
-        python: ["3.11", "3.12", "3.13", "3.14"]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -32,6 +36,7 @@ jobs:
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python }}
+          allow-prereleases: true
           cache: "poetry"
       - name: 🏗 Install workflow dependencies
         run: |
