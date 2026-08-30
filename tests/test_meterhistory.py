@@ -127,6 +127,29 @@ def test_a_bare_date_covers_the_whole_day() -> None:
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026-08-30T12:00:00Z", "2026-08-30T12:00:00+00:00"),
+        ("2026-08-30T12:00:00+02:00", "2026-08-30T12:00:00+02:00"),
+        ("2026-08-30T12:00:00", "2026-08-30T12:00:00"),
+    ],
+)
+def test_the_iso_forms_the_charger_reads_come_through(
+    value: str, expected: str
+) -> None:
+    """Test the ways of writing a moment that a charger accepts are kept.
+
+    All three were tried against a charger and picked out the same
+    sessions: it reads the offset when there is one, and takes a bare
+    timestamp as its own local time.
+    """
+    bound = normalize_meterhistory_bound(value)
+
+    assert bound is not None
+    assert bound.isoformat() == expected
+
+
+@pytest.mark.parametrize(
     "value",
     [
         "1756555555",
