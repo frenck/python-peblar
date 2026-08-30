@@ -72,6 +72,7 @@ from .websocket import PeblarWebsocket
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+    from datetime import datetime
 
     from peblar.const import (
         AccessMode,
@@ -379,16 +380,25 @@ class Peblar:
     async def meter_history(
         self,
         *,
-        start: str | None = None,
-        stop: str | None = None,
+        start: datetime | None = None,
+        stop: datetime | None = None,
     ) -> PeblarMeterHistory:
-        """Get meter history in the requested time range."""
+        """Get meter history, optionally limited to a time range.
+
+        The charger reads these bounds as ISO 8601 and quietly ignores
+        anything it cannot parse: hand it a Unix timestamp and it returns
+        the whole history instead of an error. Taking datetimes is what
+        keeps that from happening.
+
+        A naive datetime is read as the charger's own local time. An aware
+        one carries its offset, which the charger does honour.
+        """
         url = URL("statistics/meterhistory")
         query: dict[str, str] = {}
         if start:
-            query["StartTime"] = start
+            query["StartTime"] = start.isoformat()
         if stop:
-            query["StopTime"] = stop
+            query["StopTime"] = stop.isoformat()
         if query:
             url = url.with_query(query)
 

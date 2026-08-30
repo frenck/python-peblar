@@ -867,6 +867,14 @@ class PeblarMeterHistorySession(BaseModel):
         default=None,
         metadata=field_options(alias="AuthToken"),
     )
+    """Token the session was authorized with.
+
+    Matches PeblarRfidToken.rfid_token_uid, so it can be resolved to the
+    description someone gave the card. None when the charger is set to
+    charge without authentication, and on sessions that predate it being
+    turned on. Present as soon as the session starts, so there is no need
+    to wait for it to finish.
+    """
     checksum: int = field(metadata=field_options(alias="Checksum"))
     session_number: int = field(metadata=field_options(alias="SessionNumber"))
     session_start_energy_mwh: int = field(
