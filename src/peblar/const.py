@@ -38,6 +38,7 @@ class SolarChargingMode(StrEnum):
     CUSTOM_SOLAR = "CustomSolar"
     """Charge using custom solar settings."""
 
+
 class SoundVolume(IntEnum):
     """Peblar sound volume."""
 
