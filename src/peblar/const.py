@@ -101,7 +101,7 @@ class SmartChargingMode(StrEnum):
 
     PURE_SOLAR = "pure_solar"
     """Charge only with solar power."""
-  
+
     CUSTOM_SOLAR = "custom_solar"
     """Charge using custom solar settings."""
 
