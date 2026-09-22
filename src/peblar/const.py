@@ -35,6 +35,8 @@ class SolarChargingMode(StrEnum):
     PURE_SOLAR = "PureSolar"
     """Charge only with solar power."""
 
+    CUSTOM_SOLAR = "CustomSolar"
+    """Charge using custom solar settings."""
 
 class SoundVolume(IntEnum):
     """Peblar sound volume."""
@@ -98,6 +100,9 @@ class SmartChargingMode(StrEnum):
 
     PURE_SOLAR = "pure_solar"
     """Charge only with solar power."""
+  
+    CUSTOM_SOLAR = "custom_solar"
+    """Charge using custom solar settings."""
 
     SCHEDULED = "scheduled"
     "Charge only within the defined schedule."
