@@ -375,33 +375,23 @@ async def test_custom_solar_configuration_read() -> None:
     ("configuration", "expected"),
     [
         (
-            PeblarSetUserConfiguration(
-                solar_charging_custom_always_charge=True
-            ),
+            PeblarSetUserConfiguration(solar_charging_custom_always_charge=True),
             {"SolarChargingCustomAlwaysCharge": True},
         ),
         (
-            PeblarSetUserConfiguration(
-                solar_charging_custom_always_charge=False
-            ),
+            PeblarSetUserConfiguration(solar_charging_custom_always_charge=False),
             {"SolarChargingCustomAlwaysCharge": False},
         ),
         (
-            PeblarSetUserConfiguration(
-                solar_charging_custom_power_target=0
-            ),
+            PeblarSetUserConfiguration(solar_charging_custom_power_target=0),
             {"SolarChargingCustomPowerTarget": 0},
         ),
         (
-            PeblarSetUserConfiguration(
-                solar_charging_custom_power_target=1234
-            ),
+            PeblarSetUserConfiguration(solar_charging_custom_power_target=1234),
             {"SolarChargingCustomPowerTarget": 1234},
         ),
         (
-            PeblarSetUserConfiguration(
-                solar_charging_custom_power_threshold=-1300
-            ),
+            PeblarSetUserConfiguration(solar_charging_custom_power_threshold=-1300),
             {"SolarChargingCustomPowerThreshold": -1300},
         ),
     ],
