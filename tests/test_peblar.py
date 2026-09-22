@@ -759,6 +759,17 @@ def test_user_configuration_pure_solar() -> None:
     assert config.smart_charging == SmartChargingMode.PURE_SOLAR
 
 
+def test_user_configuration_custom_solar() -> None:
+    """Test user_configuration infers CUSTOM_SOLAR on firmware 1.10."""
+    body = patched_fixture(
+        "user_configuration.json",
+        SolarChargingEnable=True,
+        SolarChargingMode="CustomSolar",
+    )
+    config = PeblarUserConfiguration.from_json(body)
+    assert config.smart_charging == SmartChargingMode.CUSTOM_SOLAR
+
+
 def test_user_configuration_led_brightness_auto() -> None:
     """Test user_configuration infers AUTOMATIC led_brightness when mode is Auto."""
     body = patched_fixture(
@@ -802,6 +813,14 @@ def test_smart_charging_model_pure_solar() -> None:
     obj = PeblarSmartCharging(smart_charging=SmartChargingMode.PURE_SOLAR)
     assert obj.solar_charging_enable is True
     assert obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR
+
+
+def test_smart_charging_model_custom_solar() -> None:
+    """Test Custom Solar maps to the correct Peblar configuration."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.CUSTOM_SOLAR)
+    assert obj.scheduled_charging_enable is False
+    assert obj.solar_charging_enable is True
+    assert obj.solar_charging_mode == SolarChargingMode.CUSTOM_SOLAR
 
 
 # ---------------------------------------------------------------------------
