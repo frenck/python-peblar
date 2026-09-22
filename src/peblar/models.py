@@ -588,6 +588,18 @@ class PeblarUserConfiguration(BaseModel):
     solar_charging_source_parameters: dict[str, Any] = field(
         metadata=field_options(alias="SolarChargingSourceParameters")
     )
+    solar_charging_custom_always_charge: bool | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomAlwaysCharge"),
+    )
+    solar_charging_custom_power_target: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerTarget"),
+    )
+    solar_charging_custom_power_threshold: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerThreshold"),
+    )
     time_zone: str = field(metadata=field_options(alias="TimeZone"))
     user_defined_charge_limit_current: int = field(
         metadata=field_options(alias="UserDefinedChargeLimitCurrent")
@@ -712,6 +724,18 @@ class PeblarSetUserConfiguration(BaseModel):
     )
     solar_charging_mode: SolarChargingMode | None = field(
         default=None, metadata=field_options(alias="SolarChargingMode")
+    )
+    solar_charging_custom_always_charge: bool | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomAlwaysCharge"),
+    )
+    solar_charging_custom_power_target: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerTarget"),
+    )
+    solar_charging_custom_power_threshold: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerThreshold"),
     )
     user_defined_charge_limit_current: int | None = field(
         default=None, metadata=field_options(alias="UserDefinedChargeLimitCurrent")
