@@ -13,6 +13,7 @@ from typer.main import get_command
 from typer.testing import CliRunner
 
 from peblar.cli import _anonymize, cli, convert_to_string
+from peblar.const import SmartChargingMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
@@ -238,6 +239,19 @@ def test_unlock(runner: CliRunner) -> None:
     mock_cls = _mock_peblar(login=None, socket_unlock=None)
     exit_code, _ = _invoke(runner, ["unlock", *_AUTH], mock_cls)
     assert exit_code == 0
+
+
+def test_smart_charging_custom_solar(runner: CliRunner) -> None:
+    """Smart-charging command supports the custom solar mode."""
+    mock_cls = _mock_peblar(login=None, smart_charging=None)
+    exit_code, _ = _invoke(
+        runner, ["smart-charging", *_AUTH, "--custom-solar", "--quiet"], mock_cls
+    )
+
+    assert exit_code == 0
+    mock_cls.return_value.__aenter__.return_value.smart_charging.assert_awaited_once_with(
+        SmartChargingMode.CUSTOM_SOLAR
+    )
 
 
 def test_reboot(runner: CliRunner) -> None:
