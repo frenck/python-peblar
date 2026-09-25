@@ -449,6 +449,9 @@ NEWER_USER_CONFIGURATION_KEYS = (
     "SboAllowed",
     "SboEnabled",
     "SessionDownloadAllowed",
+    "SolarChargingCustomAlwaysCharge",
+    "SolarChargingCustomPowerTarget",
+    "SolarChargingCustomPowerThreshold",
     "UserDefinedHouseholdPowerLimitSourceParameters",
 )
 
@@ -476,7 +479,7 @@ def test_config_on_older_firmware_shows_no_literal_none(
     """Older firmware omits settings, and the table must not print "None"."""
     data = orjson.loads(load_fixture("user_configuration.json"))
     for key in NEWER_USER_CONFIGURATION_KEYS:
-        del data[key]
+        data.pop(key, None)
 
     config = PeblarUserConfiguration.from_dict(data)
     mock_cls = _mock_peblar(login=None, user_configuration=config)

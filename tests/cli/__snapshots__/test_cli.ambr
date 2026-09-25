@@ -250,6 +250,9 @@
   │ Solar charging mode                                  │ MaxSolar               │
   │ Solar charging source parameters                     │ address: redacted-host │
   │ Solar charging source                                │ homewizard             │
+  │ Solar charging custom always charge                  │ N/A                    │
+  │ Solar charging custom power target                   │ N/A                    │
+  │ Solar charging custom power threshold                │ N/A                    │
   │ Time zone                                            │ Europe/Amsterdam       │
   │ User defined charge limit current allowed            │ ✅                     │
   │ User defined charge limit current                    │ 16A                    │

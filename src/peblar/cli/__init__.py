@@ -1525,6 +1525,18 @@ async def user_configuration(  # pylint: disable=too-many-statements
         convert_to_string(config.solar_charging_source_parameters),
     )
     table.add_row("Solar charging source", config.solar_charging_source)
+    table.add_row(
+        "Solar charging custom always charge",
+        convert_to_string(config.solar_charging_custom_always_charge),
+    )
+    table.add_row(
+        "Solar charging custom power target",
+        convert_to_string(config.solar_charging_custom_power_target),
+    )
+    table.add_row(
+        "Solar charging custom power threshold",
+        convert_to_string(config.solar_charging_custom_power_threshold),
+    )
     table.add_row("Time zone", config.time_zone)
     table.add_row(
         "User defined charge limit current allowed",
