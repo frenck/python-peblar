@@ -1628,6 +1628,12 @@ async def smart_charging(
             help="Charge only with solar power.",
         ),
     ] = False,
+    custom_solar: Annotated[
+        bool,
+        typer.Option(
+            help="Charge using custom solar settings.",
+        ),
+    ] = False,
     scheduled: Annotated[
         bool,
         typer.Option(
@@ -1638,12 +1644,11 @@ async def smart_charging(
 ) -> None:
     """Control the smart charging mode."""
     # Only one of the charging modes can be selected, and at least one must be selected.
-    if sum([default, fast_solar, smart_solar, pure_solar, scheduled]) != 1 or not any(
-        [default, fast_solar, smart_solar, pure_solar, scheduled]
-    ):
+    modes = [default, fast_solar, smart_solar, pure_solar, custom_solar, scheduled]
+    if sum(modes) != 1 or not any(modes):
         msg = (
             "Exactly one of --default, --fast-solar, --smart-solar, "
-            "--pure-solar or --scheduled must be used."
+            "--pure-solar, --custom-solar or --scheduled must be used."
         )
         raise typer.BadParameter(msg)
 
@@ -1663,6 +1668,8 @@ async def smart_charging(
                 await peblar.smart_charging(SmartChargingMode.SMART_SOLAR)
             if pure_solar:
                 await peblar.smart_charging(SmartChargingMode.PURE_SOLAR)
+            if custom_solar:
+                await peblar.smart_charging(SmartChargingMode.CUSTOM_SOLAR)
             if scheduled:
                 await peblar.smart_charging(SmartChargingMode.SCHEDULED)
 
