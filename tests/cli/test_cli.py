@@ -13,6 +13,7 @@ from typer.main import get_command
 from typer.testing import CliRunner
 
 from peblar.cli import _anonymize, cli, convert_to_string
+from peblar.const import SmartChargingMode
 from peblar.exceptions import (
     PeblarAuthenticationError,
     PeblarBadRequestError,
@@ -26,6 +27,7 @@ from peblar.models import (
     PeblarHealth,
     PeblarMeter,
     PeblarScheduledCharging,
+    PeblarSetUserConfiguration,
     PeblarSystem,
     PeblarSystemInformation,
     PeblarUserConfiguration,
@@ -180,6 +182,35 @@ def test_config_set_charge_limit(runner: CliRunner) -> None:
     assert "Success!" in output
 
 
+def test_config_set_custom_solar(runner: CliRunner) -> None:
+    """Config command PATCHes custom solar settings."""
+    mock_cls = _mock_peblar(login=None, update_user_configuration=None)
+    exit_code, output = _invoke(
+        runner,
+        [
+            "config",
+            *_AUTH,
+            "--no-solar-charging-custom-always-charge",
+            "--solar-charging-custom-power-target",
+            "1234",
+            "--solar-charging-custom-power-threshold",
+            "-1300",
+        ],
+        mock_cls,
+    )
+
+    assert exit_code == 0
+    assert "Success!" in output
+    request = mock_cls.return_value.__aenter__.return_value.update_user_configuration
+    request.assert_awaited_once_with(
+        PeblarSetUserConfiguration(
+            solar_charging_custom_always_charge=False,
+            solar_charging_custom_power_target=1234,
+            solar_charging_custom_power_threshold=-1300,
+        )
+    )
+
+
 def test_config_charge_limit_too_low(runner: CliRunner) -> None:
     """Config command rejects a charge limit below 6A."""
     mock_cls = _mock_peblar(login=None)
@@ -238,6 +269,19 @@ def test_unlock(runner: CliRunner) -> None:
     mock_cls = _mock_peblar(login=None, socket_unlock=None)
     exit_code, _ = _invoke(runner, ["unlock", *_AUTH], mock_cls)
     assert exit_code == 0
+
+
+def test_smart_charging_custom_solar(runner: CliRunner) -> None:
+    """Smart-charging command supports the custom solar mode."""
+    mock_cls = _mock_peblar(login=None, smart_charging=None)
+    exit_code, _ = _invoke(
+        runner, ["smart-charging", *_AUTH, "--custom-solar", "--quiet"], mock_cls
+    )
+
+    assert exit_code == 0
+    mock_cls.return_value.__aenter__.return_value.smart_charging.assert_awaited_once_with(
+        SmartChargingMode.CUSTOM_SOLAR
+    )
 
 
 def test_reboot(runner: CliRunner) -> None:
@@ -435,6 +479,9 @@ NEWER_USER_CONFIGURATION_KEYS = (
     "SboAllowed",
     "SboEnabled",
     "SessionDownloadAllowed",
+    "SolarChargingCustomAlwaysCharge",
+    "SolarChargingCustomPowerTarget",
+    "SolarChargingCustomPowerThreshold",
     "UserDefinedHouseholdPowerLimitSourceParameters",
 )
 
@@ -462,7 +509,7 @@ def test_config_on_older_firmware_shows_no_literal_none(
     """Older firmware omits settings, and the table must not print "None"."""
     data = orjson.loads(load_fixture("user_configuration.json"))
     for key in NEWER_USER_CONFIGURATION_KEYS:
-        del data[key]
+        data.pop(key, None)
 
     config = PeblarUserConfiguration.from_dict(data)
     mock_cls = _mock_peblar(login=None, user_configuration=config)

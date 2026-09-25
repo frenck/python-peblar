@@ -1348,6 +1348,7 @@ async def system_information(
 
 
 @cli.command("config")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 async def user_configuration(  # pylint: disable=too-many-statements
     host: Annotated[
         str,
@@ -1375,6 +1376,26 @@ async def user_configuration(  # pylint: disable=too-many-statements
             show_default=False,
         ),
     ] = None,
+    solar_charging_custom_always_charge: Annotated[
+        bool | None,
+        typer.Option(
+            help="Keep charging when using custom solar mode.",
+        ),
+    ] = None,
+    solar_charging_custom_power_target: Annotated[
+        int | None,
+        typer.Option(
+            help="Set the custom solar power target (W).",
+            show_default=False,
+        ),
+    ] = None,
+    solar_charging_custom_power_threshold: Annotated[
+        int | None,
+        typer.Option(
+            help="Set the custom solar power threshold (W).",
+            show_default=False,
+        ),
+    ] = None,
     quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Show or change the user configuration."""
@@ -1384,10 +1405,21 @@ async def user_configuration(  # pylint: disable=too-many-statements
 
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
-        if charge_current_limit is not None:
+        if any(
+            setting is not None
+            for setting in (
+                charge_current_limit,
+                solar_charging_custom_always_charge,
+                solar_charging_custom_power_target,
+                solar_charging_custom_power_threshold,
+            )
+        ):
             await peblar.update_user_configuration(
                 PeblarSetUserConfiguration(
                     user_defined_charge_limit_current=charge_current_limit,
+                    solar_charging_custom_always_charge=solar_charging_custom_always_charge,
+                    solar_charging_custom_power_target=solar_charging_custom_power_target,
+                    solar_charging_custom_power_threshold=solar_charging_custom_power_threshold,
                 ),
             )
             print_cli_success(quiet=quiet, message="Success!")
@@ -1525,6 +1557,18 @@ async def user_configuration(  # pylint: disable=too-many-statements
         convert_to_string(config.solar_charging_source_parameters),
     )
     table.add_row("Solar charging source", config.solar_charging_source)
+    table.add_row(
+        "Solar charging custom always charge",
+        convert_to_string(config.solar_charging_custom_always_charge),
+    )
+    table.add_row(
+        "Solar charging custom power target",
+        convert_to_string(config.solar_charging_custom_power_target),
+    )
+    table.add_row(
+        "Solar charging custom power threshold",
+        convert_to_string(config.solar_charging_custom_power_threshold),
+    )
     table.add_row("Time zone", config.time_zone)
     table.add_row(
         "User defined charge limit current allowed",
@@ -1574,6 +1618,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
             SmartChargingMode.FAST_SOLAR: "Fast solar",
             SmartChargingMode.SMART_SOLAR: "Smart solar",
             SmartChargingMode.PURE_SOLAR: "Pure solar",
+            SmartChargingMode.CUSTOM_SOLAR: "Custom solar",
             SmartChargingMode.SCHEDULED: "Scheduled",
         }.get(config.smart_charging, "Unknown")
     table.add_row("Smart charging mode", smart_charging_mode)
@@ -1627,6 +1672,12 @@ async def smart_charging(
             help="Charge only with solar power.",
         ),
     ] = False,
+    custom_solar: Annotated[
+        bool,
+        typer.Option(
+            help="Charge using custom solar settings.",
+        ),
+    ] = False,
     scheduled: Annotated[
         bool,
         typer.Option(
@@ -1637,12 +1688,11 @@ async def smart_charging(
 ) -> None:
     """Control the smart charging mode."""
     # Only one of the charging modes can be selected, and at least one must be selected.
-    if sum([default, fast_solar, smart_solar, pure_solar, scheduled]) != 1 or not any(
-        [default, fast_solar, smart_solar, pure_solar, scheduled]
-    ):
+    modes = [default, fast_solar, smart_solar, pure_solar, custom_solar, scheduled]
+    if sum(modes) != 1 or not any(modes):
         msg = (
             "Exactly one of --default, --fast-solar, --smart-solar, "
-            "--pure-solar or --scheduled must be used."
+            "--pure-solar, --custom-solar or --scheduled must be used."
         )
         raise typer.BadParameter(msg)
 
@@ -1662,6 +1712,8 @@ async def smart_charging(
                 await peblar.smart_charging(SmartChargingMode.SMART_SOLAR)
             if pure_solar:
                 await peblar.smart_charging(SmartChargingMode.PURE_SOLAR)
+            if custom_solar:
+                await peblar.smart_charging(SmartChargingMode.CUSTOM_SOLAR)
             if scheduled:
                 await peblar.smart_charging(SmartChargingMode.SCHEDULED)
 

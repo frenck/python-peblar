@@ -336,6 +336,84 @@ async def test_user_configuration_scheduled_mode() -> None:
     assert config.smart_charging == SmartChargingMode.SCHEDULED
 
 
+async def test_custom_solar_configuration_missing_fields() -> None:
+    """Test older configuration responses without custom solar fields."""
+    with aioresponses() as mocked:
+        mocked.get(
+            USER_CONFIG_URL,
+            status=200,
+            body=load_fixture("user_configuration.json"),
+        )
+        async with Peblar(host=HOST) as peblar:
+            config = await peblar.user_configuration()
+
+    assert config.solar_charging_custom_always_charge is None
+    assert config.solar_charging_custom_power_target is None
+    assert config.solar_charging_custom_power_threshold is None
+
+
+async def test_custom_solar_configuration_read() -> None:
+    """Test reading the custom solar settings from the charger."""
+    body = patched_fixture(
+        "user_configuration.json",
+        SolarChargingCustomAlwaysCharge=False,
+        SolarChargingCustomPowerTarget=0,
+        SolarChargingCustomPowerThreshold=-1300,
+    )
+
+    with aioresponses() as mocked:
+        mocked.get(USER_CONFIG_URL, status=200, body=body)
+        async with Peblar(host=HOST) as peblar:
+            config = await peblar.user_configuration()
+
+    assert config.solar_charging_custom_always_charge is False
+    assert config.solar_charging_custom_power_target == 0
+    assert config.solar_charging_custom_power_threshold == -1300
+
+
+@pytest.mark.parametrize(
+    ("configuration", "expected"),
+    [
+        (
+            PeblarSetUserConfiguration(solar_charging_custom_always_charge=True),
+            {"SolarChargingCustomAlwaysCharge": True},
+        ),
+        (
+            PeblarSetUserConfiguration(solar_charging_custom_always_charge=False),
+            {"SolarChargingCustomAlwaysCharge": False},
+        ),
+        (
+            PeblarSetUserConfiguration(solar_charging_custom_power_target=0),
+            {"SolarChargingCustomPowerTarget": 0},
+        ),
+        (
+            PeblarSetUserConfiguration(solar_charging_custom_power_target=1234),
+            {"SolarChargingCustomPowerTarget": 1234},
+        ),
+        (
+            PeblarSetUserConfiguration(solar_charging_custom_power_threshold=-1300),
+            {"SolarChargingCustomPowerThreshold": -1300},
+        ),
+    ],
+)
+async def test_custom_solar_configuration_write(
+    configuration: PeblarSetUserConfiguration,
+    expected: dict[str, bool | int],
+) -> None:
+    """Test PATCH sends only the requested custom solar setting."""
+    with aioresponses() as mocked:
+        mocked.patch(
+            USER_CONFIG_URL,
+            status=200,
+            body="",
+            content_type="text/plain",
+        )
+        async with Peblar(host=HOST) as peblar:
+            await peblar.update_user_configuration(configuration)
+
+        assert request_payload(mocked) == expected
+
+
 async def test_current_versions() -> None:
     """Test current_versions parses the versions payload."""
     with aioresponses() as mocked:
@@ -759,6 +837,17 @@ def test_user_configuration_pure_solar() -> None:
     assert config.smart_charging == SmartChargingMode.PURE_SOLAR
 
 
+def test_user_configuration_custom_solar() -> None:
+    """Test user_configuration infers CUSTOM_SOLAR on firmware 1.10."""
+    body = patched_fixture(
+        "user_configuration.json",
+        SolarChargingEnable=True,
+        SolarChargingMode="CustomSolar",
+    )
+    config = PeblarUserConfiguration.from_json(body)
+    assert config.smart_charging == SmartChargingMode.CUSTOM_SOLAR
+
+
 def test_user_configuration_led_brightness_auto() -> None:
     """Test user_configuration infers AUTOMATIC led_brightness when mode is Auto."""
     body = patched_fixture(
@@ -802,6 +891,14 @@ def test_smart_charging_model_pure_solar() -> None:
     obj = PeblarSmartCharging(smart_charging=SmartChargingMode.PURE_SOLAR)
     assert obj.solar_charging_enable is True
     assert obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR
+
+
+def test_smart_charging_model_custom_solar() -> None:
+    """Test Custom Solar maps to the correct Peblar configuration."""
+    obj = PeblarSmartCharging(smart_charging=SmartChargingMode.CUSTOM_SOLAR)
+    assert obj.scheduled_charging_enable is False
+    assert obj.solar_charging_enable is True
+    assert obj.solar_charging_mode == SolarChargingMode.CUSTOM_SOLAR
 
 
 # ---------------------------------------------------------------------------
