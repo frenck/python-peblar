@@ -46,6 +46,9 @@
       'host',
       'password',
       'quiet',
+      'solar_charging_custom_always_charge',
+      'solar_charging_custom_power_target',
+      'solar_charging_custom_power_threshold',
     ]),
     'del-rfid-token': list([
       'host',
