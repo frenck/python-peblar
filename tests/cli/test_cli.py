@@ -27,6 +27,7 @@ from peblar.models import (
     PeblarHealth,
     PeblarMeter,
     PeblarScheduledCharging,
+    PeblarSetUserConfiguration,
     PeblarSystem,
     PeblarSystemInformation,
     PeblarUserConfiguration,
@@ -179,6 +180,35 @@ def test_config_set_charge_limit(runner: CliRunner) -> None:
     )
     assert exit_code == 0
     assert "Success!" in output
+
+
+def test_config_set_custom_solar(runner: CliRunner) -> None:
+    """Config command PATCHes custom solar settings."""
+    mock_cls = _mock_peblar(login=None, update_user_configuration=None)
+    exit_code, output = _invoke(
+        runner,
+        [
+            "config",
+            *_AUTH,
+            "--no-solar-charging-custom-always-charge",
+            "--solar-charging-custom-power-target",
+            "1234",
+            "--solar-charging-custom-power-threshold",
+            "-1300",
+        ],
+        mock_cls,
+    )
+
+    assert exit_code == 0
+    assert "Success!" in output
+    request = mock_cls.return_value.__aenter__.return_value.update_user_configuration
+    request.assert_awaited_once_with(
+        PeblarSetUserConfiguration(
+            solar_charging_custom_always_charge=False,
+            solar_charging_custom_power_target=1234,
+            solar_charging_custom_power_threshold=-1300,
+        )
+    )
 
 
 def test_config_charge_limit_too_low(runner: CliRunner) -> None:
