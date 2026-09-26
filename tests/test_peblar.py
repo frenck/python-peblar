@@ -113,11 +113,21 @@ async def test_identify() -> None:
             await peblar.identify()
 
 
-async def test_socket_unlock() -> None:
-    """Test socket_unlock posts to the socket-unlock endpoint."""
+@pytest.mark.parametrize(
+    ("firmware", "path"),
+    [
+        ("1.9.0+1+WL-1", "system/socket-unlock"),
+        ("1.10.0+1+WL-1", "connector/socket-unlock"),
+        ("", "connector/socket-unlock"),
+    ],
+)
+async def test_socket_unlock(firmware: str, path: str) -> None:
+    """Test socket_unlock posts to the endpoint the firmware expects."""
+    body = patched_fixture("versions_current.json", Firmware=firmware)
     with aioresponses() as mocked:
+        mocked.get(CURRENT_VERSIONS_URL, status=200, body=body)
         mocked.post(
-            BASE_URL + "system/socket-unlock",
+            BASE_URL + path,
             status=200,
             body="",
             content_type="text/plain",

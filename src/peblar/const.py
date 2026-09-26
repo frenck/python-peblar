@@ -4,6 +4,8 @@ from enum import IntEnum, StrEnum
 
 # Firmware version that introduced the local REST API.
 MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API = "1.6"
+# Firmware version that moved socket unlock under connector/.
+MINIMUM_FIRMWARE_VERSION_CONNECTOR_API = "1.10"
 
 
 class AccessMode(StrEnum):
