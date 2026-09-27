@@ -19,6 +19,7 @@ from tenacity import (
 from yarl import URL
 
 from .const import (
+    MINIMUM_FIRMWARE_VERSION_CONNECTOR_API,
     MINIMUM_FIRMWARE_VERSION_LOCAL_REST_API,
     AuthorizationMethod,
 )
@@ -483,7 +484,15 @@ class Peblar:
 
     async def socket_unlock(self) -> None:
         """Unlock the socket of the Peblar charger."""
-        await self.request(URL("system/socket-unlock"), method=hdrs.METH_POST)
+        # Firmware 1.10 moved the endpoint under connector/, the old path
+        # answers 404 there.
+        versions = await self.current_versions()
+        minimum = get_awesome_version(MINIMUM_FIRMWARE_VERSION_CONNECTOR_API)
+        if versions.firmware_version and versions.firmware_version < minimum:
+            uri = URL("system/socket-unlock")
+        else:
+            uri = URL("connector/socket-unlock")
+        await self.request(uri, method=hdrs.METH_POST)
 
     async def reboot(self) -> None:
         """Reboot the Peblar charger."""
