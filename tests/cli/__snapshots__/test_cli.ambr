@@ -148,6 +148,7 @@
       'quiet',
     ]),
     'smart-charging': list([
+      'custom_solar',
       'default',
       'fast_solar',
       'host',
