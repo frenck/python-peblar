@@ -73,6 +73,9 @@ def resolve_smart_charging_mode(
     if mode == SmartChargingMode.PURE_SOLAR:
         return False, True, SolarChargingMode.PURE_SOLAR
 
+    if mode == SmartChargingMode.CUSTOM_SOLAR:
+        return False, True, SolarChargingMode.CUSTOM_SOLAR
+
     msg = f"Unknown smart charging mode: {mode!r}"
     raise ValueError(msg)
 
@@ -661,6 +664,8 @@ class PeblarUserConfiguration(BaseModel):
                 obj.smart_charging = SmartChargingMode.SMART_SOLAR
             elif obj.solar_charging_mode == SolarChargingMode.PURE_SOLAR:
                 obj.smart_charging = SmartChargingMode.PURE_SOLAR
+            elif obj.solar_charging_mode == SolarChargingMode.CUSTOM_SOLAR:
+                obj.smart_charging = SmartChargingMode.CUSTOM_SOLAR
 
         if obj.led_intensity_mode == LedIntensityMode.AUTO:
             obj.led_brightness = LedBrightness.AUTOMATIC

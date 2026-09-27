@@ -1574,6 +1574,7 @@ async def user_configuration(  # pylint: disable=too-many-statements
             SmartChargingMode.FAST_SOLAR: "Fast solar",
             SmartChargingMode.SMART_SOLAR: "Smart solar",
             SmartChargingMode.PURE_SOLAR: "Pure solar",
+            SmartChargingMode.CUSTOM_SOLAR: "Custom solar",
             SmartChargingMode.SCHEDULED: "Scheduled",
         }.get(config.smart_charging, "Unknown")
     table.add_row("Smart charging mode", smart_charging_mode)
