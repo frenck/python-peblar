@@ -145,6 +145,14 @@ class PeblarAuthStatus(BaseModel):
 class PeblarConnector(BaseModel):
     """Object holding what is physically plugged into the charger."""
 
+    connector_id: str | None = field(
+        default=None, metadata=field_options(alias="ConnectorId")
+    )
+    """Which connector this is, on a charger that has more than one.
+
+    Firmware 1.10 and later only; older firmware does not say.
+    """
+
     plugged_in_ev: bool = field(metadata=field_options(alias="PluggedInEV"))
     """A cable is plugged into the vehicle."""
 

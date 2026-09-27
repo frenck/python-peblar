@@ -549,7 +549,16 @@ class Peblar:
 
     async def connector(self) -> PeblarConnector:
         """Get what is currently plugged into the charger."""
-        result = await self.request(URL("system/connector"))
+        # Firmware 1.10 moved this under connector/ and renamed it, the
+        # old path answers 404 there.
+        versions = await self.current_versions()
+        minimum = get_awesome_version(MINIMUM_FIRMWARE_VERSION_CONNECTOR_API)
+        if versions.firmware_version and versions.firmware_version < minimum:
+            uri = URL("system/connector")
+        else:
+            uri = URL("connector/plug-state")
+
+        result = await self.request(uri)
         return PeblarConnector.from_json(result)
 
     async def time_synced(self) -> bool:
