@@ -579,6 +579,18 @@ class PeblarUserConfiguration(BaseModel):
     solar_charging_allowed: bool = field(
         metadata=field_options(alias="SolarChargingAllowed")
     )
+    solar_charging_custom_always_charge: bool | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomAlwaysCharge"),
+    )
+    solar_charging_custom_power_target: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerTarget"),
+    )
+    solar_charging_custom_power_threshold: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerThreshold"),
+    )
     solar_charging_enabled: bool = field(
         metadata=field_options(alias="SolarChargingEnable")
     )
@@ -711,6 +723,18 @@ class PeblarSetUserConfiguration(BaseModel):
     )
     scheduled_charging_enabled: bool | None = field(
         default=None, metadata=field_options(alias="ScheduledChargingEnable")
+    )
+    solar_charging_custom_always_charge: bool | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomAlwaysCharge"),
+    )
+    solar_charging_custom_power_target: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerTarget"),
+    )
+    solar_charging_custom_power_threshold: int | None = field(
+        default=None,
+        metadata=field_options(alias="SolarChargingCustomPowerThreshold"),
     )
     solar_charging_enabled: bool | None = field(
         default=None, metadata=field_options(alias="SolarChargingEnable")
