@@ -1348,6 +1348,7 @@ async def system_information(
 
 
 @cli.command("config")
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 async def user_configuration(  # pylint: disable=too-many-statements
     host: Annotated[
         str,
@@ -1375,6 +1376,26 @@ async def user_configuration(  # pylint: disable=too-many-statements
             show_default=False,
         ),
     ] = None,
+    solar_charging_custom_always_charge: Annotated[
+        bool | None,
+        typer.Option(
+            help="Keep charging when using custom solar mode.",
+        ),
+    ] = None,
+    solar_charging_custom_power_target: Annotated[
+        int | None,
+        typer.Option(
+            help="Set the custom solar power target (W).",
+            show_default=False,
+        ),
+    ] = None,
+    solar_charging_custom_power_threshold: Annotated[
+        int | None,
+        typer.Option(
+            help="Set the custom solar power threshold (W).",
+            show_default=False,
+        ),
+    ] = None,
     quiet: Annotated[bool, QUIET_OPTION] = False,
 ) -> None:
     """Show or change the user configuration."""
@@ -1384,10 +1405,21 @@ async def user_configuration(  # pylint: disable=too-many-statements
 
     async with Peblar(host=host) as peblar:
         await peblar.login(password=password)
-        if charge_current_limit is not None:
+        if any(
+            setting is not None
+            for setting in (
+                charge_current_limit,
+                solar_charging_custom_always_charge,
+                solar_charging_custom_power_target,
+                solar_charging_custom_power_threshold,
+            )
+        ):
             await peblar.update_user_configuration(
                 PeblarSetUserConfiguration(
                     user_defined_charge_limit_current=charge_current_limit,
+                    solar_charging_custom_always_charge=solar_charging_custom_always_charge,
+                    solar_charging_custom_power_target=solar_charging_custom_power_target,
+                    solar_charging_custom_power_threshold=solar_charging_custom_power_threshold,
                 ),
             )
             print_cli_success(quiet=quiet, message="Success!")
@@ -1525,6 +1557,18 @@ async def user_configuration(  # pylint: disable=too-many-statements
         convert_to_string(config.solar_charging_source_parameters),
     )
     table.add_row("Solar charging source", config.solar_charging_source)
+    table.add_row(
+        "Solar charging custom always charge",
+        convert_to_string(config.solar_charging_custom_always_charge),
+    )
+    table.add_row(
+        "Solar charging custom power target",
+        convert_to_string(config.solar_charging_custom_power_target),
+    )
+    table.add_row(
+        "Solar charging custom power threshold",
+        convert_to_string(config.solar_charging_custom_power_threshold),
+    )
     table.add_row("Time zone", config.time_zone)
     table.add_row(
         "User defined charge limit current allowed",
