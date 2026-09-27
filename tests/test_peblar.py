@@ -1750,20 +1750,60 @@ def test_charge_limiter_reserved() -> None:
 # Device state endpoints
 # ---------------------------------------------------------------------------
 CONNECTOR_URL = BASE_URL + "system/connector"
+PLUG_STATE_URL = BASE_URL + "connector/plug-state"
 NTP_SYNC_URL = BASE_URL + "system/ntp-sync"
 WEB_INTERFACE_MODE_URL = BASE_URL + "system/web-interface-mode"
 AUTH_STATUS_URL = BASE_URL + "auth/status"
 LOGOUT_URL = BASE_URL + "auth/logout"
 
 
-async def test_connector() -> None:
-    """Test the connector endpoint reports what is plugged in."""
+@pytest.mark.parametrize(
+    ("firmware", "url", "fixture"),
+    [
+        ("1.9.0+1+WL-1", CONNECTOR_URL, "connector.json"),
+        ("1.10.0+1+WL-1", PLUG_STATE_URL, "plug_state.json"),
+        ("", PLUG_STATE_URL, "plug_state.json"),
+    ],
+)
+async def test_connector(firmware: str, url: str, fixture: str) -> None:
+    """Test connector reads from the endpoint the firmware expects."""
+    body = patched_fixture("versions_current.json", Firmware=firmware)
     with aioresponses() as mocked:
+        mocked.get(CURRENT_VERSIONS_URL, status=200, body=body)
+        mocked.get(url, status=200, body=load_fixture(fixture))
+        async with Peblar(host=HOST) as peblar:
+            connector = await peblar.connector()
+
+    assert connector.plugged_in_ev is False
+    assert connector.plugged_in_evse is True
+
+
+async def test_connector_id_is_absent_on_older_firmware() -> None:
+    """Test a charger that does not name its connector reports None.
+
+    Firmware before 1.10 leaves it out, and there is only one connector
+    to speak of on those anyway.
+    """
+    body = patched_fixture("versions_current.json", Firmware="1.9.0+1+WL-1")
+    with aioresponses() as mocked:
+        mocked.get(CURRENT_VERSIONS_URL, status=200, body=body)
         mocked.get(CONNECTOR_URL, status=200, body=load_fixture("connector.json"))
         async with Peblar(host=HOST) as peblar:
             connector = await peblar.connector()
-    assert connector.plugged_in_ev is False
-    assert connector.plugged_in_evse is True
+
+    assert connector.connector_id is None
+
+
+async def test_connector_is_named_on_newer_firmware() -> None:
+    """Test firmware 1.10 says which connector it is talking about."""
+    body = patched_fixture("versions_current.json", Firmware="1.10.0+1+WL-1")
+    with aioresponses() as mocked:
+        mocked.get(CURRENT_VERSIONS_URL, status=200, body=body)
+        mocked.get(PLUG_STATE_URL, status=200, body=load_fixture("plug_state.json"))
+        async with Peblar(host=HOST) as peblar:
+            connector = await peblar.connector()
+
+    assert connector.connector_id == "1"
 
 
 async def test_auth_status() -> None:
