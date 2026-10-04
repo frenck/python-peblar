@@ -1,11 +1,6 @@
 {
-  "ActiveErrorCodes": [
-    10,
-    22
-  ],
-  "ActiveWarningCodes": [
-    5
-  ],
+  "ActiveErrorCodes": [10, 22],
+  "ActiveWarningCodes": [5],
   "CellularSignalStrength": null,
   "FirmwareVersion": "1.9.0+1+WL-1",
   "Force1PhaseAllowed": true,
