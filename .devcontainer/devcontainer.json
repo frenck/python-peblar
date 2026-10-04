@@ -4,11 +4,7 @@
   },
   "customizations": {
     "codespaces": {
-      "openFiles": [
-        "README.md",
-        "src/peblar/peblar.py",
-        "src/peblar/models.py"
-      ]
+      "openFiles": ["README.md", "src/peblar/peblar.py", "src/peblar/models.py"]
     },
     "vscode": {
       "extensions": [
