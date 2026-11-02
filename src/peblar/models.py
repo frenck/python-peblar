@@ -1054,8 +1054,14 @@ class PeblarSessionMeterData(BaseModel):
     )
     """Instantaneous power per phase, in Watts."""
 
-    session_energy: int = field(metadata=field_options(alias="sessionEnergy"))
-    """Energy delivered in the current or last session, in Wh."""
+    session_energy: int | None = field(
+        default=None, metadata=field_options(alias="sessionEnergy")
+    )
+    """Energy delivered in the current or last session, in Wh.
+
+    The charger leaves this out of some events, for example while no
+    vehicle is connected.
+    """
 
     total_energy: int = field(metadata=field_options(alias="totalEnergy"))
     """Lifetime energy delivered by the charger, in Wh."""

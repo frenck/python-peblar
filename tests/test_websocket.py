@@ -18,13 +18,13 @@ from peblar.exceptions import (
     PeblarConnectionTimeoutError,
     PeblarError,
 )
-from peblar.models import PeblarFirmwareUpdateStatus
+from peblar.models import PeblarFirmwareUpdateStatus, PeblarSessionStatus
 from peblar.websocket import PeblarWebsocket, session_status_topic
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from peblar.models import PeblarSessionStatus, PeblarTokenFound
+    from peblar.models import PeblarTokenFound
 
 SESSION_TOPIC = session_status_topic()
 REJECTED_TOPIC = "/nope"
@@ -624,3 +624,15 @@ def test_firmware_update_status_version_fields_are_optional() -> None:
     status = PeblarFirmwareUpdateStatus.from_dict({"status": "Unknown"})
     assert status.firmware_old == ""
     assert status.firmware_new == ""
+
+
+def test_session_status_without_session_energy() -> None:
+    """Test meter data without a session energy reading still parses."""
+    status = PeblarSessionStatus.from_dict(
+        {
+            "meterData": {"instantaneousPower": [0, 0, 0], "totalEnergy": 0},
+            "state": "available",
+        }
+    )
+    assert status.meter_data is not None
+    assert status.meter_data.session_energy is None

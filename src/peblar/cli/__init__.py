@@ -2425,9 +2425,14 @@ async def watch(
                 console.print(state)
                 return
 
+            session_energy = (
+                "Unknown"
+                if readings.session_energy is None
+                else f"{readings.session_energy / 1000:.3f} kWh"
+            )
             console.print(
                 f"{state}[/] [bold]{readings.instantaneous_power_total}W[/] "
-                f"session [bold]{readings.session_energy / 1000:.3f} kWh[/] "
+                f"session [bold]{session_energy}[/] "
                 f"total [bold]{readings.total_energy / 1000:.1f} kWh[/]"
             )
 
