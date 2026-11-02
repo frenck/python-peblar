@@ -6,9 +6,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import click
 import orjson
 import pytest
+from typer.core import TyperGroup
 from typer.main import get_command
 from typer.testing import CliRunner
 
@@ -114,7 +114,7 @@ _AUTH = ["--host", "192.168.1.1", "--password", "secret"]
 def test_cli_structure(snapshot: SnapshotAssertion) -> None:
     """The CLI exposes the expected commands and options."""
     group = get_command(cli)
-    assert isinstance(group, click.Group)
+    assert isinstance(group, TyperGroup)
     structure = {
         name: sorted(param.name for param in subcommand.params)
         for name, subcommand in sorted(group.commands.items())
